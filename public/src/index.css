@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); 
+body { font-family: 'Inter', sans-serif; }
+@media print {
+    @page { margin: 0.5cm; }
+    body { background-color: white !important; color: black !important; }
+    .no-print, .print\:hidden { display: none !important; }
+    .print\:block { display: block !important; }
+    .print\:text-black { color: black !important; }
+    .print\:bg-white { background-color: white !important; }
+    .print\:border-gray-300 { border-color: #d1d5db !important; }
+    .dark { color: black !important; background-color: white !important; }
+}
