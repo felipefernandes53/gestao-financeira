@@ -17,12 +17,13 @@ import {
 // --- COLE SUA CONFIGURAÇÃO DO FIREBASE AQUI ---
 // Substitua tudo dentro das chaves abaixo pelos dados que você pegou no console do Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSy...", 
-  authDomain: "seu-projeto.firebaseapp.com",
-  projectId: "seu-projeto",
-  storageBucket: "seu-projeto.appspot.com",
-  messagingSenderId: "123...",
-  appId: "1:123..."
+  apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
+  authDomain: "app-financeiro-2f.firebaseapp.com",
+  projectId: "app-financeiro-2f",
+  storageBucket: "app-financeiro-2f.firebasestorage.app",
+  messagingSenderId: "803799145233",
+  appId: "1:803799145233:web:546f085b19f7faff4acab0",
+  measurementId: "G-KJ8SXVD6DD"
 };
 // -----------------------------------------------
 
@@ -510,7 +511,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);!
-        if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey) { console.error("FIREBASE CONFIG NÃO ENCONTRADA"); return; }
+        if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey.startsWith('AIza')) { console.error("FIREBASE CONFIG NÃO ENCONTRADA OU INVÁLIDA"); return; }
         const app = initializeApp(firebaseConfig);
         const _auth = getAuth(app);
         const _db = getFirestore(app);
