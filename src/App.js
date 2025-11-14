@@ -8,13 +8,14 @@ import {
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell
 } from 'recharts';
+// CORREÇÃO CRÍTICA DOS ÍCONES PARA O MUNDO REAL
 import { 
-    LucideTrash2, LucideBuilding2, LucidePlus, LucideEdit2, LucideX, LucideSettings, 
-    LucidePieChart, LucideTarget, LucideChevronDown, LucideChevronRight, LucideSearch, 
-    LucidePercent, LucideInfo, LucideDownload, LucideCopy, LucideCheckCircle, LucideSmartphone, LucideMenu, LucideCheck, LucideRocket, LucideMoon, LucideSun, LucideRepeat, LucidePrinter
+    Trash2 as LucideTrash2, Building2 as LucideBuilding2, Plus as LucidePlus, Edit2 as LucideEdit2, X as LucideX, Settings as LucideSettings, 
+    PieChart as LucidePieChart, Target as LucideTarget, ChevronDown as LucideChevronDown, ChevronRight as LucideChevronRight, Search as LucideSearch, 
+    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter
 } from 'lucide-react';
 
-// --- SUA CONFIGURAÇÃO DO FIREBASE ---
+// --- SUAS CHAVES DO FIREBASE (JÁ CONFIGURADAS) ---
 const firebaseConfig = {
   apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
   authDomain: "app-financeiro-2f.firebaseapp.com",
@@ -26,7 +27,7 @@ const firebaseConfig = {
 };
 // -----------------------------------------------
 
-// App ID Fixo para garantir consistência fora do ambiente de chat
+// App ID Fixo para garantir consistência
 const appId = "financial-app-production";
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
