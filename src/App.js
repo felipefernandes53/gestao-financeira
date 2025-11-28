@@ -97,6 +97,9 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
+// *** CORREÇÃO DO ERRO: Definir transactionCategories como fallback para evitar crash ***
+const transactionCategories = categoriesBusiness; 
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
 const safeCurrency = (value) => {
