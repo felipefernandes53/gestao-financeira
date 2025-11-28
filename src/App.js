@@ -39,7 +39,9 @@ const PERIOD_OPTIONS = [
     { value: 'Y', label: 'Ano Completo' },
 ];
 
-// --- CATEGORIAS EMPRESARIAIS ---
+// --- DEFINIÇÃO DE CATEGORIAS (ORDEM CRÍTICA) ---
+
+// 1. EMPRESARIAIS
 const TransactionTypeBusiness = {
     RECEITA: 'Receita',
     CUSTO: 'Custo',
@@ -62,7 +64,7 @@ const categoriesBusiness = [
     { value: TransactionTypeBusiness.IMPOSTOS, label: 'Impostos (-)', color: 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30', isPositive: false },
 ];
 
-// --- CATEGORIAS PESSOAIS ---
+// 2. PESSOAIS
 const TransactionTypePersonal = {
     RECEITA: 'Renda',
     MORADIA: 'Moradia',
@@ -97,12 +99,12 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// *** CORREÇÃO DEFINITIVA ***
-// Mantemos esta variável como fallback para evitar erros em componentes antigos ou no carregamento inicial
+// 3. VARIÁVEL DE SEGURANÇA (Para evitar o ReferenceError)
 const transactionCategories = categoriesBusiness; 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
+// --- Utilitários ---
 const safeCurrency = (value) => {
     if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00';
     try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); } catch (e) { return 'R$ Error'; }
@@ -156,6 +158,7 @@ const calculateFinancials = (data = [], type = 'business') => {
     return financials;
 };
 
+// --- Componentes Visuais ---
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
