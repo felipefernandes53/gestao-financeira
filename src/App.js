@@ -97,6 +97,10 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
+// --- CORREÇÃO: Combinar categorias para evitar erros de referência ---
+const transactionCategories = categoriesBusiness; // Padrão inicial
+const allCategories = [...categoriesBusiness, ...categoriesPersonal]; // Para busca segura
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
 // --- Utilitários ---
@@ -132,7 +136,6 @@ const calculateFinancials = (data = [], type = 'business') => {
     const receitaKey = type === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
     const receita = sumByType(receitaKey);
     
-    // Total Saídas (soma tudo que não é receita)
     let totalSaidas = 0;
     cats.forEach(cat => {
         if (!cat.isPositive) totalSaidas += sumByType(cat.value);
@@ -140,13 +143,11 @@ const calculateFinancials = (data = [], type = 'business') => {
 
     const fluxoCaixa = receita - totalSaidas;
     
-    // Retorna objeto genérico + totais específicos
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals };
     cats.forEach(cat => {
         financials[cat.value] = sumByType(cat.value);
     });
     
-    // Campos específicos de DRE Empresarial
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
         financials.ebitda = financials.lucroBruto - financials[TransactionTypeBusiness.DESPESA_OPERACIONAL];
@@ -156,7 +157,6 @@ const calculateFinancials = (data = [], type = 'business') => {
     return financials;
 };
 
-// --- Componentes Visuais ---
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
@@ -179,11 +179,14 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
             const displayReal = showPercentage ? safePercent(valReal, real.receita) : safeCurrency(finalReal);
             const finalMeta = isNegative ? -valMeta : valMeta;
             const variacao = finalReal - finalMeta;
+            
             return (
                 <div key={subName} className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-2 px-4 border-b border-gray-200 text-xs ${isPrintMode ? 'text-black' : 'text-gray-600 dark:text-slate-300 bg-gray-50/50 dark:bg-slate-900/50'}`}>
                     <span className={`${isPrintMode ? 'text-black' : 'text-gray-500 dark:text-slate-400'} pl-6 flex items-center`}>• {subName}</span>
                     <span className={`text-right ${isPrintMode ? 'text-black' : ''}`}>{displayReal}</span>
-                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600 dark:text-green-400') : (isPrintMode ? 'text-black' : 'text-red-500 dark:text-red-400')}`}>{valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
+                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600 dark:text-green-400') : (isPrintMode ? 'text-black' : 'text-red-500 dark:text-red-400')}`}>
+                        {valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}
+                    </span>}
                 </div>
             );
         });
@@ -217,7 +220,6 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
             {!isPrintMode && (<div className="absolute top-2 right-2"><button onClick={() => setShowPercentage(!showPercentage)} className={`p-1.5 rounded-md transition-colors flex items-center gap-1 text-xs font-medium ${showPercentage ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'}`} title="Alternar R$ / %"><LucidePercent size={14} />{showPercentage ? 'R$' : '%'}</button></div>)}
             <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} ${isPrintMode ? 'bg-gray-200 text-black border-b border-gray-300' : 'bg-gray-100 dark:bg-slate-900 text-gray-500 dark:text-slate-400'} text-xs font-bold uppercase py-3 px-4`}><div>Descrição</div><div className="text-right">{showPercentage ? 'Análise (%)' : 'Realizado (R$)'}</div>{isMonthly && !showPercentage && <div className="text-right">Variação</div>}</div>
             
-            {/* RENDERIZAÇÃO CONDICIONAL BASEADA NO TIPO DE EMPRESA */}
             {companyType === 'personal' ? (
                 <div>
                     <LineItem label="Renda Total" type={TransactionTypePersonal.RECEITA} valReal={real[TransactionTypePersonal.RECEITA]} valMeta={meta[TransactionTypePersonal.RECEITA]} canExpand />
@@ -247,11 +249,17 @@ const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, co
     const [localSubBudget, setLocalSubBudget] = useState({});
     const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
 
-    useEffect(() => { setLocalBudget(budget || {}); setLocalSubBudget(budget?.subcategories || {}); }, [budget]);
+    useEffect(() => {
+        setLocalBudget(budget || {});
+        setLocalSubBudget(budget?.subcategories || {});
+    }, [budget]);
 
     if (!isMonthly) return <div className="p-8 text-center text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700">Selecione um mês específico para planejar o orçamento.</div>;
 
-    const handleMainChange = (type, value) => { setLocalBudget(prev => ({ ...prev, [type]: parseFloat(value) || 0 })); };
+    const handleMainChange = (type, value) => {
+        setLocalBudget(prev => ({ ...prev, [type]: parseFloat(value) || 0 }));
+    };
+
     const handleSubChange = (type, subName, value) => {
         const key = `${type}:${subName}`; const numVal = parseFloat(value) || 0;
         setLocalSubBudget(prev => {
@@ -262,17 +270,46 @@ const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, co
         });
     };
 
+    const handleSave = () => {
+        onSaveBudget({ ...localBudget, subcategories: localSubBudget });
+    };
+
     return (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
             <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><LucideTarget className="text-indigo-600 dark:text-indigo-400" /> Planejamento {companyType === 'personal' ? 'Pessoal' : 'Empresarial'}</h2>
-            <div className="space-y-8">{cats.map(cat => (<div key={cat.value} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-700 break-inside-avoid"><div className="flex justify-between items-center mb-3"><h3 className={`font-bold text-sm uppercase ${cat.color.split(' ')[0]}`}>{cat.label}</h3><div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-40"><span className="pl-3 text-slate-400 text-sm">R$</span><input type="number" value={localBudget[cat.value] || ''} onChange={e => handleMainChange(cat.value, e.target.value)} className="w-full p-2 text-right outline-none font-semibold text-slate-700 dark:text-slate-200 bg-transparent" placeholder="0,00" /></div></div>{subcategories[cat.value]?.length > 0 && (<div className="pl-4 space-y-2 border-l-2 border-slate-200 dark:border-slate-700 ml-2">{subcategories[cat.value].map(sub => (<div key={sub.id} className="flex justify-between items-center text-sm"><span className="text-slate-600 dark:text-slate-400">{sub.name}</span><div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-32 h-8"><span className="pl-2 text-slate-400 text-xs">R$</span><input type="number" value={localSubBudget[`${cat.value}:${sub.name}`] || ''} onChange={e => handleSubChange(cat.value, sub.name, e.target.value)} className="w-full p-1 text-right outline-none text-sm text-slate-600 dark:text-slate-300 bg-transparent" placeholder="0,00" /></div></div>))}</div>)}</div>))}</div>
-            <button onClick={() => onSaveBudget({ ...localBudget, subcategories: localSubBudget })} className="w-full mt-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">SALVAR METAS</button>
+            <div className="space-y-8">
+                {cats.map(cat => (
+                    <div key={cat.value} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-700 break-inside-avoid">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className={`font-bold text-sm uppercase ${cat.color.split(' ')[0]}`}>{cat.label}</h3>
+                            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-40">
+                                <span className="pl-3 text-slate-400 text-sm">R$</span>
+                                <input type="number" value={localBudget[cat.value] || ''} onChange={e => handleMainChange(cat.value, e.target.value)} className="w-full p-2 text-right outline-none font-semibold text-slate-700 dark:text-slate-200 bg-transparent" placeholder="0,00" />
+                            </div>
+                        </div>
+                        {subcategories[cat.value]?.length > 0 && (
+                            <div className="pl-4 space-y-2 border-l-2 border-slate-200 dark:border-slate-700 ml-2">
+                                {subcategories[cat.value].map(sub => (
+                                    <div key={sub.id} className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-600 dark:text-slate-400">{sub.name}</span>
+                                        <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-32 h-8">
+                                            <span className="pl-2 text-slate-400 text-xs">R$</span>
+                                            <input type="number" value={localSubBudget[`${cat.value}:${sub.name}`] || ''} onChange={e => handleSubChange(cat.value, sub.name, e.target.value)} className="w-full p-1 text-right outline-none text-sm text-slate-600 dark:text-slate-300 bg-transparent" placeholder="0,00" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+            <button onClick={handleSave} className="w-full mt-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">SALVAR METAS</button>
         </div>
     );
 };
 
-const CashFlowView = ({ transactions, isPrintMode, companyType }) => {
-    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
+const CashFlowView = ({ transactions, isPrintMode }) => {
+    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions), [transactions]);
     if (isPrintMode) {
         return (
             <div className="grid grid-cols-3 gap-4 border border-gray-300 p-4 text-center">
@@ -336,7 +373,17 @@ const CategoryPieChart = ({ transactions, type }) => {
             <div className="flex-1 flex justify-center items-center relative">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={true}>
+                        <Pie 
+                            data={data} 
+                            cx="50%" 
+                            cy="50%" 
+                            innerRadius={50} 
+                            outerRadius={70} 
+                            paddingAngle={3} 
+                            dataKey="value" 
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                            labelLine={true}
+                        >
                             {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                         </Pie>
                         <Tooltip formatter={(value) => safeCurrency(value)} />
@@ -400,6 +447,20 @@ const PrintLayout = ({ companyName, periodStr, onClose, children }) => {
     );
 };
 
+const RepeatModal = ({ onClose, onConfirm, transaction }) => {
+    const [repeatCount, setRepeatCount] = useState(1);
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6">
+                <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2"><LucideRepeat className="text-indigo-600 dark:text-indigo-400" /> Repetir Lançamento</h3><button onClick={onClose}><LucideX className="text-slate-400 hover:text-slate-600" /></button></div>
+                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl mb-4 border border-slate-100 dark:border-slate-700"><p className="font-bold text-sm text-slate-700 dark:text-slate-200">{transaction.desc}</p><p className="text-xs text-slate-500 dark:text-slate-400">{safeCurrency(transaction.amount)} • {transaction.type}</p></div>
+                <div className="mb-6"><label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">Repetir por quantos meses?</label><div className="flex items-center gap-3"><button onClick={() => setRepeatCount(Math.max(1, repeatCount - 1))} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg font-bold text-slate-600 dark:text-slate-300">-</button><input type="number" value={repeatCount} onChange={(e) => setRepeatCount(Math.max(1, parseInt(e.target.value) || 1))} className="w-full text-center p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold dark:text-white" /><button onClick={() => setRepeatCount(repeatCount + 1)} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg font-bold text-slate-600 dark:text-slate-300">+</button></div></div>
+                <button onClick={() => onConfirm(repeatCount)} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">Confirmar</button>
+            </div>
+        </div>
+    );
+};
+
 const InstallGuideModal = ({ onClose }) => {
     return (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
@@ -416,7 +477,7 @@ const InstallGuideModal = ({ onClose }) => {
 };
 
 const TutorialModal = ({ onClose }) => {
-    const steps = [{ title: "Bem-vindo ao seu Gestor Financeiro!", desc: "Vamos dar uma volta rápida para você dominar suas finanças.", icon: <LucideInfo size={48} className="text-indigo-500" /> }, { title: "1. Menu Lateral", desc: "Toque no menu (canto superior esquerdo) para trocar de empresa ou configurar categorias.", icon: <LucideMenu size={48} className="text-slate-800" /> }, { title: "2. Lançamentos", desc: "Na aba 'LANÇAMENTOS', registre tudo que entra e sai. Use datas passadas para histórico.", icon: <LucidePlus size={48} className="text-green-500" /> }, { title: "3. Planejamento", desc: "Defina metas na aba 'PLANEJAMENTO'.", icon: <LucideTarget size={48} className="text-amber-500" /> }, { title: "4. Resultados", desc: "DRE, Fluxo e Gráficos automáticos.", icon: <LucidePieChart size={48} className="text-purple-500" /> }];
+    const steps = [{ title: "Bem-vindo ao seu Gestor Financeiro!", desc: "Vamos dar uma volta rápida para você dominar suas finanças.", icon: <LucideInfo size={48} className="text-indigo-500" /> }, { title: "1. Menu Lateral", desc: "Toque no menu (canto superior esquerdo) para trocar de empresa ou configurar categorias.", icon: <LucideMenu size={48} className="text-slate-800" /> }, { title: "2. Lançamentos", desc: "Na aba 'LANÇAMENTOS', registre tudo. Use datas passadas para histórico.", icon: <LucidePlus size={48} className="text-green-500" /> }, { title: "3. Planejamento", desc: "Defina metas na aba 'PLANEJAMENTO'.", icon: <LucideTarget size={48} className="text-amber-500" /> }, { title: "4. Resultados", desc: "DRE, Fluxo e Gráficos automáticos.", icon: <LucidePieChart size={48} className="text-purple-500" /> }];
     const [currentStep, setCurrentStep] = useState(0);
     return (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
@@ -436,7 +497,7 @@ const Sidebar = ({ isOpen, onClose, companies, currentCompany, onChangeCompany, 
     const [newName, setNewName] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editName, setEditName] = useState('');
-    const [newCompanyType, setNewCompanyType] = useState('business'); // 'business' or 'personal'
+    const [newCompanyType, setNewCompanyType] = useState('business');
 
     const handleCreate = () => { if (newName.trim()) { onAddCompany(newName, newCompanyType); setNewName(''); setIsCreating(false); onClose(); } };
     const handleStartEdit = (e, company) => { e.stopPropagation(); setEditingId(company.id); setEditName(company.name); };
@@ -451,9 +512,7 @@ const Sidebar = ({ isOpen, onClose, companies, currentCompany, onChangeCompany, 
                     <div className="space-y-2 mb-6">
                         {companies.map(c => (
                             <div key={c.id} onClick={() => { if (editingId !== c.id) { onChangeCompany(c); onClose(); } }} className={`w-full text-left p-3 rounded-xl flex items-center gap-3 transition-colors cursor-pointer group ${currentCompany?.id === c.id ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-100 dark:border-indigo-800' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${c.type === 'personal' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
-                                    {c.type === 'personal' ? <LucideUser size={16}/> : <LucideBriefcase size={16}/>}
-                                </div>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${c.type === 'personal' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{c.type === 'personal' ? <LucideUser size={16}/> : <LucideBriefcase size={16}/>}</div>
                                 {editingId === c.id ? (<div className="flex-1 flex items-center gap-2"><input autoFocus className="w-full p-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-600 rounded text-sm outline-none" value={editName} onChange={(e) => setEditName(e.target.value)} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(e); }} /><button onClick={handleSaveEdit} className="p-1 bg-green-100 dark:bg-green-900/50 text-green-600 rounded hover:bg-green-200"><LucideCheck size={14} /></button><button onClick={(e) => { e.stopPropagation(); setEditingId(null); }} className="p-1 bg-red-100 dark:bg-red-900/50 text-red-600 rounded hover:bg-red-200"><LucideX size={14} /></button></div>) : (<><span className="flex-1 truncate text-sm">{c.name}</span><button onClick={(e) => handleStartEdit(e, c)} className="p-1.5 rounded-full text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 opacity-0 group-hover:opacity-100 transition-opacity" title="Renomear"><LucideEdit2 size={14} /></button></>)}
                             </div>
                         ))}
@@ -702,7 +761,7 @@ export default function App() {
 
             <header className="max-w-5xl mx-auto mb-6 p-4 md:p-8 pb-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => setShowSidebar(true)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200" title="Menu"><LucideMenu size={28} /></button>
+                    <button onClick={() => setShowSidebar(true)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200" title="Menu de Empresas"><LucideMenu size={28} /></button>
                     <div><h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Gestão Financeira</h1><p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1"><LucideBuilding2 size={14} />{currentCompany?.name}</p></div>
                     <button onClick={() => setShowCalculator(true)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-indigo-600 dark:text-indigo-400" title="Calculadora"><LucideCalculator size={24} /></button>
                 </div>
