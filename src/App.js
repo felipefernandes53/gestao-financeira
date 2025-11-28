@@ -97,7 +97,8 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// *** CORREÇÃO DO ERRO: Definir transactionCategories como fallback para evitar crash ***
+// *** CORREÇÃO DEFINITIVA ***
+// Mantemos esta variável como fallback para evitar erros em componentes antigos ou no carregamento inicial
 const transactionCategories = categoriesBusiness; 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
@@ -369,7 +370,17 @@ const CategoryPieChart = ({ transactions, type }) => {
             <div className="flex-1 flex justify-center items-center relative">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={true}>
+                        <Pie 
+                            data={data} 
+                            cx="50%" 
+                            cy="50%" 
+                            innerRadius={50} 
+                            outerRadius={70} 
+                            paddingAngle={3} 
+                            dataKey="value" 
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                            labelLine={true}
+                        >
                             {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                         </Pie>
                         <Tooltip formatter={(value) => safeCurrency(value)} />
