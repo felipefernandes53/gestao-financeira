@@ -97,10 +97,6 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// --- CORREÇÃO: Combinar categorias para evitar erros de referência ---
-const transactionCategories = categoriesBusiness; // Padrão inicial
-const allCategories = [...categoriesBusiness, ...categoriesPersonal]; // Para busca segura
-
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
 // --- Utilitários ---
@@ -136,6 +132,7 @@ const calculateFinancials = (data = [], type = 'business') => {
     const receitaKey = type === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
     const receita = sumByType(receitaKey);
     
+    // Total Saídas (soma tudo que não é receita)
     let totalSaidas = 0;
     cats.forEach(cat => {
         if (!cat.isPositive) totalSaidas += sumByType(cat.value);
@@ -143,11 +140,13 @@ const calculateFinancials = (data = [], type = 'business') => {
 
     const fluxoCaixa = receita - totalSaidas;
     
+    // Retorna objeto genérico + totais específicos
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals };
     cats.forEach(cat => {
         financials[cat.value] = sumByType(cat.value);
     });
     
+    // Campos específicos de DRE Empresarial
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
         financials.ebitda = financials.lucroBruto - financials[TransactionTypeBusiness.DESPESA_OPERACIONAL];
@@ -157,6 +156,7 @@ const calculateFinancials = (data = [], type = 'business') => {
     return financials;
 };
 
+// --- Componentes Visuais ---
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
@@ -179,14 +179,11 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
             const displayReal = showPercentage ? safePercent(valReal, real.receita) : safeCurrency(finalReal);
             const finalMeta = isNegative ? -valMeta : valMeta;
             const variacao = finalReal - finalMeta;
-            
             return (
                 <div key={subName} className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-2 px-4 border-b border-gray-200 text-xs ${isPrintMode ? 'text-black' : 'text-gray-600 dark:text-slate-300 bg-gray-50/50 dark:bg-slate-900/50'}`}>
                     <span className={`${isPrintMode ? 'text-black' : 'text-gray-500 dark:text-slate-400'} pl-6 flex items-center`}>• {subName}</span>
                     <span className={`text-right ${isPrintMode ? 'text-black' : ''}`}>{displayReal}</span>
-                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600 dark:text-green-400') : (isPrintMode ? 'text-black' : 'text-red-500 dark:text-red-400')}`}>
-                        {valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}
-                    </span>}
+                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600 dark:text-green-400') : (isPrintMode ? 'text-black' : 'text-red-500 dark:text-red-400')}`}>{valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
                 </div>
             );
         });
@@ -220,6 +217,7 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
             {!isPrintMode && (<div className="absolute top-2 right-2"><button onClick={() => setShowPercentage(!showPercentage)} className={`p-1.5 rounded-md transition-colors flex items-center gap-1 text-xs font-medium ${showPercentage ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'}`} title="Alternar R$ / %"><LucidePercent size={14} />{showPercentage ? 'R$' : '%'}</button></div>)}
             <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} ${isPrintMode ? 'bg-gray-200 text-black border-b border-gray-300' : 'bg-gray-100 dark:bg-slate-900 text-gray-500 dark:text-slate-400'} text-xs font-bold uppercase py-3 px-4`}><div>Descrição</div><div className="text-right">{showPercentage ? 'Análise (%)' : 'Realizado (R$)'}</div>{isMonthly && !showPercentage && <div className="text-right">Variação</div>}</div>
             
+            {/* RENDERIZAÇÃO CONDICIONAL BASEADA NO TIPO DE EMPRESA */}
             {companyType === 'personal' ? (
                 <div>
                     <LineItem label="Renda Total" type={TransactionTypePersonal.RECEITA} valReal={real[TransactionTypePersonal.RECEITA]} valMeta={meta[TransactionTypePersonal.RECEITA]} canExpand />
@@ -373,17 +371,7 @@ const CategoryPieChart = ({ transactions, type }) => {
             <div className="flex-1 flex justify-center items-center relative">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Pie 
-                            data={data} 
-                            cx="50%" 
-                            cy="50%" 
-                            innerRadius={50} 
-                            outerRadius={70} 
-                            paddingAngle={3} 
-                            dataKey="value" 
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            labelLine={true}
-                        >
+                        <Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={true}>
                             {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                         </Pie>
                         <Tooltip formatter={(value) => safeCurrency(value)} />
@@ -761,7 +749,7 @@ export default function App() {
 
             <header className="max-w-5xl mx-auto mb-6 p-4 md:p-8 pb-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => setShowSidebar(true)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200" title="Menu de Empresas"><LucideMenu size={28} /></button>
+                    <button onClick={() => setShowSidebar(true)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200" title="Menu"><LucideMenu size={28} /></button>
                     <div><h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Gestão Financeira</h1><p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1"><LucideBuilding2 size={14} />{currentCompany?.name}</p></div>
                     <button onClick={() => setShowCalculator(true)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-indigo-600 dark:text-indigo-400" title="Calculadora"><LucideCalculator size={24} /></button>
                 </div>
