@@ -39,9 +39,7 @@ const PERIOD_OPTIONS = [
     { value: 'Y', label: 'Ano Completo' },
 ];
 
-// --- DEFINIÇÃO DE CATEGORIAS (ORDEM CRÍTICA) ---
-
-// 1. EMPRESARIAIS
+// --- CATEGORIAS EMPRESARIAIS ---
 const TransactionTypeBusiness = {
     RECEITA: 'Receita',
     CUSTO: 'Custo',
@@ -64,7 +62,7 @@ const categoriesBusiness = [
     { value: TransactionTypeBusiness.IMPOSTOS, label: 'Impostos (-)', color: 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30', isPositive: false },
 ];
 
-// 2. PESSOAIS
+// --- CATEGORIAS PESSOAIS ---
 const TransactionTypePersonal = {
     RECEITA: 'Renda',
     MORADIA: 'Moradia',
@@ -99,12 +97,11 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// 3. VARIÁVEL DE SEGURANÇA (Para evitar o ReferenceError)
+// 3. VARIÁVEL DE SEGURANÇA
 const transactionCategories = categoriesBusiness; 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
-// --- Utilitários ---
 const safeCurrency = (value) => {
     if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00';
     try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); } catch (e) { return 'R$ Error'; }
@@ -158,7 +155,6 @@ const calculateFinancials = (data = [], type = 'business') => {
     return financials;
 };
 
-// --- Componentes Visuais ---
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
@@ -566,7 +562,9 @@ export default function App() {
     const [recurringMonths, setRecurringMonths] = useState(1); // Novo estado para meses de recorrência
     const [newSubcatName, setNewSubcatName] = useState('');
 
-    const activeCategories = useMemo(() => currentCompany?.type === 'personal' ? categoriesPersonal : categoriesBusiness, [currentCompany]);
+    // DEFINE CONSTANTE PARA EVITAR CRASHES NOS GRÁFICOS
+    const companyType = currentCompany?.type || 'business';
+    const activeCategories = useMemo(() => companyType === 'personal' ? categoriesPersonal : categoriesBusiness, [companyType]);
 
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
@@ -719,7 +717,7 @@ export default function App() {
             {repeatingTransaction && <RepeatModal onClose={() => setRepeatingTransaction(null)} onConfirm={confirmRepeat} transaction={repeatingTransaction} />}
             {showCalculator && <CalculatorModal onClose={() => setShowCalculator(false)} onConfirm={handleCalculatorFinish} />}
             
-            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={currentCompany?.type || 'business'} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={currentCompany?.type || 'business'} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
+            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={companyType} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={companyType} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
             
             <Sidebar 
                 isOpen={showSidebar} 
@@ -781,8 +779,8 @@ export default function App() {
                 )}
 
                 <button type="submit" className={`w-full py-3.5 text-white rounded-xl font-bold text-base transition-colors shadow-sm ${editingTransaction ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}>{editingTransaction ? 'ATUALIZAR' : 'REGISTRAR'}</button></form></div></div><div className="lg:col-span-3"><div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden h-[600px] flex flex-col"><div className="p-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200 flex justify-between items-center flex-wrap gap-3"><div className="flex items-center gap-2 flex-1"><span>Histórico</span><span className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs px-2 py-1 rounded-full">{searchedData.length} itens</span></div><div className="relative w-full md:w-auto md:max-w-xs"><LucideSearch className="absolute left-3 top-2.5 text-slate-400" size={16} /><input type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-slate-100 dark:bg-slate-900 border-0 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all" /></div></div><div className="flex-1 overflow-y-auto"><ul className="divide-y divide-slate-100 dark:divide-slate-700">{searchedData.slice().sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<li key={t.id} className={`p-4 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-900/50 group transition-colors ${editingTransaction?.id === t.id ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}><div className="truncate pr-4 flex-1"><div className="flex items-center gap-2"><span className="font-semibold text-slate-800 dark:text-slate-200 truncate text-base">{t.desc}</span>{t.editedAt && <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 rounded-full font-medium" title="Editado">(editado)</span>}</div><div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap"><span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-md text-xs font-medium">{safeDate(t.createdAt)}</span><span>•</span><span>{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</span>{t.subcategory && <><span>•</span><span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-md text-xs font-medium">{t.subcategory}</span></>}</div></div><div className="flex items-center gap-3"><div className={`font-bold text-base whitespace-nowrap ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{safeCurrency(t.amount)}</div><div className="flex opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleRepeat(t)} className="text-slate-300 hover:text-indigo-500 dark:hover:text-indigo-400 p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all" title="Repetir Lançamento"><LucideRepeat size={18} /></button><button onClick={() => handleEditClick(t)} className="text-slate-300 hover:text-indigo-500 dark:hover:text-indigo-400 p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all"><LucideEdit2 size={18} /></button><button onClick={() => handleDelete(t.id)} className="text-slate-300 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"><LucideTrash2 size={18} /></button></div></div></li>))}{searchedData.length === 0 && <li className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 p-8 space-y-4"><p>{searchTerm ? 'Nenhum lançamento encontrado para esta busca.' : 'Nenhum lançamento para este período.'}</p></li>}</ul></div></div></div></div>)}
-                {mainTab === 'planejamento' && (<BudgetPlanningView budget={budget} subcategories={subcategories} onSaveBudget={handleSaveBudget} isMonthly={typeof period === 'number'} companyType={currentCompany?.type || 'business'} />)}
-                {mainTab === 'resultados' && (<div><div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-700/50 p-1 rounded-lg mb-6 max-w-md mx-auto">{['dre', 'fluxo', 'graficos', 'subcategorias'].map(key => (<button key={key} onClick={() => setResultTab(key)} className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${resultTab === key ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>{key === 'dre' ? 'DRE' : key === 'fluxo' ? 'Fluxo' : key === 'graficos' ? 'Gráficos' : <LucidePieChart size={16} className="mx-auto"/>}</button>))}</div><div className="animate-fade-in">{resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={currentCompany?.type || 'business'} />}{resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={currentCompany?.type || 'business'} />}{resultTab === 'graficos' && <ChartsView allTransactions={transactions} companyType={currentCompany?.type || 'business'} />}{resultTab === 'subcategorias' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.CUSTO} /></div>)}</div></div>)}
+                {mainTab === 'planejamento' && (<BudgetPlanningView budget={budget} subcategories={subcategories} onSaveBudget={handleSaveBudget} isMonthly={typeof period === 'number'} companyType={companyType} />)}
+                {mainTab === 'resultados' && (<div><div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-700/50 p-1 rounded-lg mb-6 max-w-md mx-auto">{['dre', 'fluxo', 'graficos', 'subcategorias'].map(key => (<button key={key} onClick={() => setResultTab(key)} className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${resultTab === key ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>{key === 'dre' ? 'DRE' : key === 'fluxo' ? 'Fluxo' : key === 'graficos' ? 'Gráficos' : <LucidePieChart size={16} className="mx-auto"/>}</button>))}</div><div className="animate-fade-in">{resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} />}{resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} />}{resultTab === 'graficos' && <ChartsView allTransactions={transactions} companyType={companyType} />}{resultTab === 'subcategorias' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.CUSTO} /></div>)}</div></div>)}
             </main>
         </div>
     );
