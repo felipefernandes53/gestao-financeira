@@ -99,7 +99,6 @@ const categoriesPersonal = [
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
-// --- Utilitários ---
 const safeCurrency = (value) => {
     if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00';
     try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); } catch (e) { return 'R$ Error'; }
@@ -132,7 +131,6 @@ const calculateFinancials = (data = [], type = 'business') => {
     const receitaKey = type === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
     const receita = sumByType(receitaKey);
     
-    // Total Saídas (soma tudo que não é receita)
     let totalSaidas = 0;
     cats.forEach(cat => {
         if (!cat.isPositive) totalSaidas += sumByType(cat.value);
@@ -140,13 +138,11 @@ const calculateFinancials = (data = [], type = 'business') => {
 
     const fluxoCaixa = receita - totalSaidas;
     
-    // Retorna objeto genérico + totais específicos
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals };
     cats.forEach(cat => {
         financials[cat.value] = sumByType(cat.value);
     });
     
-    // Campos específicos de DRE Empresarial
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
         financials.ebitda = financials.lucroBruto - financials[TransactionTypeBusiness.DESPESA_OPERACIONAL];
@@ -156,7 +152,6 @@ const calculateFinancials = (data = [], type = 'business') => {
     return financials;
 };
 
-// --- Componentes Visuais ---
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
@@ -669,7 +664,6 @@ export default function App() {
     const handleRenameCompany = async (companyId, newName) => { if (!newName.trim() || !user) return; try { await updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies`, companyId), { name: newName.trim() }); } catch (e) { alert("Erro ao renomear empresa."); } };
     const handleAddSubcategory = async (type) => { if (!newSubcatName.trim() || !currentCompany) return; try { await addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/subcategories`), { type, name: newSubcatName.trim() }); setNewSubcatName(''); } catch (e) { alert("Erro ao adicionar."); } };
     const handleDeleteSubcategory = async (id) => { if (!window.confirm("Excluir subcategoria?")) return; try { await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/subcategories`, id)); } catch (e) { alert("Erro ao excluir."); } };
-    
     const createDefaultCompany = async (name = 'Minha Empresa', type = 'business') => { try { const newCompRef = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies`)); await setDoc(newCompRef, { name, type, createdAt: Timestamp.now() }); const batch = writeBatch(db); 
     const defaults = type === 'personal' ? DEFAULT_SUBCATEGORIES_PERSONAL : DEFAULT_SUBCATEGORIES_BUSINESS;
     Object.entries(defaults).forEach(([type, subs]) => { subs.forEach(subName => { const ref = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${newCompRef.id}/subcategories`)); batch.set(ref, { type, name: subName }); }); }); await batch.commit(); if (name === 'Minha Empresa') setCurrentCompany({ id: newCompRef.id, name, type }); } catch (e) { console.error(e); alert("Erro ao criar empresa inicial."); } };
@@ -680,12 +674,6 @@ export default function App() {
     const handleExportCSV = () => { if (!filteredData || filteredData.length === 0) { alert("Não há dados para exportar neste período."); return; } const headers = ["Data", "Tipo", "Subcategoria", "Descrição", "Valor (R$)"]; const rows = filteredData.map(t => [t.createdAt?.toDate ? safeDate(t.createdAt) : '', t.type, t.subcategory || '', t.desc.replace(/"/g, '""'), (typeof t.amount === 'number' ? t.amount : 0).toFixed(2).replace('.', ',')]); const csvContent = [headers.join(";"), ...rows.map(row => row.map(cell => `"${cell}"`).join(";"))].join("\n"); setCsvContentToExport(csvContent); setExportFileName(`financeiro_${currentCompany?.name || 'empresa'}_${year}_${typeof period === 'number' ? MONTHS[period] : period}.csv`); setShowExportModal(true); };
     const handlePrint = () => { setShowPrintPreview(true); };
     const handleCalculatorFinish = (val) => { setFormAmount(val); setShowCalculator(false); };
-    
-    const requestNotificationPermission = () => {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') { setNotificationsEnabled(true); alert("Notificações ativadas!"); }
-        });
-    };
 
     if (loading && !user) return <div className="flex h-screen items-center justify-center text-indigo-600 dark:text-indigo-400 animate-pulse bg-white dark:bg-slate-950">Iniciando...</div>;
 
