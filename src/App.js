@@ -97,7 +97,7 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// 3. VARIÁVEL DE SEGURANÇA
+// *** CORREÇÃO DE SEGURANÇA ***
 const transactionCategories = categoriesBusiness; 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
@@ -610,11 +610,24 @@ export default function App() {
         return onSnapshot(q, (snap) => {
             const comps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             setCompanies(comps);
-            if (comps.length > 0 && !currentCompany) setCurrentCompany(comps[0]);
+            
+            // LOGIC FOR PERSISTENCE
+            const lastId = localStorage.getItem('lastCompanyId');
+            const found = comps.find(c => c.id === lastId);
+            
+            if (comps.length > 0 && !currentCompany) {
+                setCurrentCompany(found || comps[0]);
+            }
+            
             if (comps.length === 0 && !currentCompany) createDefaultCompany();
             setLoading(false);
         });
-    }, [user, db]);
+    }, [user, db]); // currentCompany removed from deps to avoid loop
+
+    const handleCompanyChange = (company) => {
+        setCurrentCompany(company);
+        localStorage.setItem('lastCompanyId', company.id);
+    };
 
     useEffect(() => {
         if (!user || !db || !currentCompany) { setTransactions([]); setSubcategories({}); return; }
@@ -681,7 +694,12 @@ export default function App() {
     const handleDeleteSubcategory = async (id) => { if (!window.confirm("Excluir subcategoria?")) return; try { await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/subcategories`, id)); } catch (e) { alert("Erro ao excluir."); } };
     const createDefaultCompany = async (name = 'Minha Empresa', type = 'business') => { try { const newCompRef = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies`)); await setDoc(newCompRef, { name, type, createdAt: Timestamp.now() }); const batch = writeBatch(db); 
     const defaults = type === 'personal' ? DEFAULT_SUBCATEGORIES_PERSONAL : DEFAULT_SUBCATEGORIES_BUSINESS;
-    Object.entries(defaults).forEach(([type, subs]) => { subs.forEach(subName => { const ref = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${newCompRef.id}/subcategories`)); batch.set(ref, { type, name: subName }); }); }); await batch.commit(); if (name === 'Minha Empresa') setCurrentCompany({ id: newCompRef.id, name, type }); } catch (e) { console.error(e); alert("Erro ao criar empresa inicial."); } };
+    Object.entries(defaults).forEach(([type, subs]) => { subs.forEach(subName => { const ref = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${newCompRef.id}/subcategories`)); batch.set(ref, { type, name: subName }); }); }); await batch.commit(); 
+    if (name === 'Minha Empresa') {
+        const newComp = { id: newCompRef.id, name, type };
+        setCurrentCompany(newComp); 
+        localStorage.setItem('lastCompanyId', newComp.id);
+    } } catch (e) { console.error(e); alert("Erro ao criar empresa inicial."); } };
     
     const handleCreateCompany = async (name, type) => { if (!name || !user || !db) return; await createDefaultCompany(name, type); };
     const handleInstallClick = () => { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then((choiceResult) => { if (choiceResult.outcome === 'accepted') { setDeferredPrompt(null); } }); } else { setShowInstallGuide(true); } };
@@ -724,7 +742,7 @@ export default function App() {
                 onClose={() => setShowSidebar(false)} 
                 companies={companies}
                 currentCompany={currentCompany}
-                onChangeCompany={setCurrentCompany}
+                onChangeCompany={handleCompanyChange}
                 onAddCompany={handleCreateCompany}
                 onRenameCompany={handleRenameCompany}
                 onOpenSettings={() => setShowSettings(true)}
