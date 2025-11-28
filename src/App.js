@@ -8,14 +8,13 @@ import {
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell
 } from 'recharts';
-// CORREÇÃO CRÍTICA DOS ÍCONES PARA O MUNDO REAL
 import { 
     Trash2 as LucideTrash2, Building2 as LucideBuilding2, Plus as LucidePlus, Edit2 as LucideEdit2, X as LucideX, Settings as LucideSettings, 
     PieChart as LucidePieChart, Target as LucideTarget, ChevronDown as LucideChevronDown, ChevronRight as LucideChevronRight, Search as LucideSearch, 
-    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter
+    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator
 } from 'lucide-react';
 
-// --- SUAS CHAVES DO FIREBASE (JÁ CONFIGURADAS) ---
+// --- SUAS CHAVES DO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
   authDomain: "app-financeiro-2f.firebaseapp.com",
@@ -27,7 +26,6 @@ const firebaseConfig = {
 };
 // -----------------------------------------------
 
-// App ID Fixo para garantir consistência
 const appId = "financial-app-production";
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -321,11 +319,30 @@ const CategoryPieChart = ({ transactions, type }) => {
     }, [transactions, type]);
 
     if (data.length === 0) return <div className="h-64 flex items-center justify-center text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-800/50 rounded-xl">Sem dados de {type}.</div>;
+
     return (
         <div className="h-96 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 flex flex-col">
             <h3 className="text-sm font-bold text-gray-700 dark:text-slate-200 mb-4 text-center">{type} por Subcategoria</h3>
             <div className="flex-1 flex justify-center items-center relative">
-                <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={true}>{data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip formatter={(value) => safeCurrency(value)} /><Legend verticalAlign="bottom" height={36} /></PieChart></ResponsiveContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie 
+                            data={data} 
+                            cx="50%" 
+                            cy="50%" 
+                            innerRadius={50} 
+                            outerRadius={70} 
+                            paddingAngle={3} 
+                            dataKey="value" 
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                            labelLine={true}
+                        >
+                            {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip formatter={(value) => safeCurrency(value)} />
+                        <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                </ResponsiveContainer>
             </div>
         </div>
     );
@@ -369,7 +386,7 @@ const PrintLayout = ({ companyName, periodStr, onClose, children }) => {
 const RepeatModal = ({ onClose, onConfirm, transaction }) => {
     const [repeatCount, setRepeatCount] = useState(1);
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6">
                 <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2"><LucideRepeat className="text-indigo-600 dark:text-indigo-400" /> Repetir Lançamento</h3><button onClick={onClose}><LucideX className="text-slate-400 hover:text-slate-600" /></button></div>
                 <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl mb-4 border border-slate-100 dark:border-slate-700"><p className="font-bold text-sm text-slate-700 dark:text-slate-200">{transaction.desc}</p><p className="text-xs text-slate-500 dark:text-slate-400">{safeCurrency(transaction.amount)} • {transaction.type}</p></div>
@@ -380,9 +397,26 @@ const RepeatModal = ({ onClose, onConfirm, transaction }) => {
     );
 };
 
+const CalculatorModal = ({ onClose, onConfirm }) => {
+    const [expression, setExpression] = useState('');
+    const handleBtnClick = (val) => { if (val === 'C') { setExpression(''); } else if (val === '=') { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); const result = eval(sanitized); setExpression(String(result)); } catch (e) { setExpression('Erro'); setTimeout(() => setExpression(''), 1000); } } else { setExpression(prev => prev + val); } };
+    const handleConfirm = () => { let finalVal = expression; if (/[+\-x÷]/.test(expression)) { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); finalVal = String(eval(sanitized)); } catch (e) { return; } } onConfirm(finalVal.replace('.', ',')); };
+    const btns = ['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6">
+                <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">Calculadora</h3><button onClick={onClose}><LucideX className="text-slate-400 hover:text-slate-600" /></button></div>
+                <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl mb-4 text-right text-2xl font-mono font-bold text-slate-800 dark:text-white overflow-x-auto">{expression || '0'}</div>
+                <div className="grid grid-cols-4 gap-2 mb-4">{btns.map(b => (<button key={b} onClick={() => handleBtnClick(b)} className={`p-4 rounded-xl font-bold text-lg transition-colors ${['C'].includes(b) ? 'bg-red-100 text-red-600 hover:bg-red-200' : ['÷','x','-','+'].includes(b) ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{b}</button>))}<button onClick={() => handleBtnClick('=')} className="col-span-4 bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-white p-3 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-500">=</button></div>
+                <button onClick={handleConfirm} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">USAR ESTE VALOR</button>
+            </div>
+        </div>
+    );
+};
+
 const InstallGuideModal = ({ onClose }) => {
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
                 <div className="flex justify-end mb-2"><button onClick={onClose}><LucideX className="text-slate-400" /></button></div>
                 <div className="mb-4 flex justify-center"><div className="bg-indigo-100 dark:bg-indigo-900/30 p-4 rounded-full"><LucideRocket size={48} className="text-indigo-600 dark:text-indigo-400" /></div></div>
@@ -399,7 +433,7 @@ const TutorialModal = ({ onClose }) => {
     const steps = [{ title: "Bem-vindo ao seu Gestor Financeiro!", desc: "Vamos dar uma volta rápida para você dominar suas finanças.", icon: <LucideInfo size={48} className="text-indigo-500" /> }, { title: "1. Menu Lateral", desc: "Toque no menu (canto superior esquerdo) para trocar de empresa ou configurar categorias.", icon: <LucideMenu size={48} className="text-slate-800" /> }, { title: "2. Lançamentos", desc: "Na aba 'LANÇAMENTOS', registre tudo. Use datas passadas para histórico.", icon: <LucidePlus size={48} className="text-green-500" /> }, { title: "3. Planejamento", desc: "Defina metas na aba 'PLANEJAMENTO'.", icon: <LucideTarget size={48} className="text-amber-500" /> }, { title: "4. Resultados", desc: "DRE, Fluxo e Gráficos automáticos.", icon: <LucidePieChart size={48} className="text-purple-500" /> }];
     const [currentStep, setCurrentStep] = useState(0);
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-8 flex flex-col items-center text-center space-y-6">
                 <div className="bg-slate-50 dark:bg-slate-700 p-6 rounded-full">{steps[currentStep].icon}</div>
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{steps[currentStep].title}</h2>
@@ -423,8 +457,8 @@ const Sidebar = ({ isOpen, onClose, companies, currentCompany, onChangeCompany, 
 
     return (
         <>
-            {isOpen && <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={onClose} />}
-            <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            {isOpen && <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm print:hidden" onClick={onClose} />}
+            <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} print:hidden`}>
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center"><h2 className="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2"><LucideBuilding2 className="text-indigo-600 dark:text-indigo-400" /> Minhas Empresas</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><LucideX size={24} /></button></div>
                 <div className="p-4 overflow-y-auto h-[calc(100%-80px)] flex flex-col">
                     <div className="space-y-2 mb-6">
@@ -470,6 +504,8 @@ export default function App() {
     const [showInstallGuide, setShowInstallGuide] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [showPrintPreview, setShowPrintPreview] = useState(false);
+    const [showCalculator, setShowCalculator] = useState(false); // Estado da calculadora
+
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [repeatingTransaction, setRepeatingTransaction] = useState(null);
     const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
@@ -569,21 +605,64 @@ export default function App() {
     const closeTutorial = () => { setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial', 'true'); const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; if (!isStandalone) { handleInstallClick(); } };
     const handleExportCSV = () => { if (!filteredData || filteredData.length === 0) { alert("Não há dados para exportar neste período."); return; } const headers = ["Data", "Tipo", "Subcategoria", "Descrição", "Valor (R$)"]; const rows = filteredData.map(t => [t.createdAt?.toDate ? safeDate(t.createdAt) : '', t.type, t.subcategory || '', t.desc.replace(/"/g, '""'), (typeof t.amount === 'number' ? t.amount : 0).toFixed(2).replace('.', ',')]); const csvContent = [headers.join(";"), ...rows.map(row => row.map(cell => `"${cell}"`).join(";"))].join("\n"); setCsvContentToExport(csvContent); setExportFileName(`financeiro_${currentCompany?.name || 'empresa'}_${year}_${typeof period === 'number' ? MONTHS[period] : period}.csv`); setShowExportModal(true); };
     const handlePrint = () => { setShowPrintPreview(true); };
+    const handleCalculatorFinish = (val) => { setFormAmount(val); setShowCalculator(false); };
 
     if (loading && !user) return <div className="flex h-screen items-center justify-center text-indigo-600 dark:text-indigo-400 animate-pulse bg-white dark:bg-slate-950">Iniciando...</div>;
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-300 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <script dangerouslySetInnerHTML={{__html: `tailwind.config = { darkMode: 'class' }`}} />
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); 
+                .font-sans { font-family: 'Inter', sans-serif; }
+                @media print {
+                    @page { margin: 1cm; }
+                    body { background-color: white !important; color: black !important; }
+                    .no-print, .print\\:hidden { display: none !important; }
+                    .print\\:block { display: block !important; }
+                    .print\\:text-black { color: black !important; }
+                    .print\\:bg-white { background-color: white !important; }
+                    .print\\:border-gray-300 { border-color: #d1d5db !important; }
+                    .dark { color: black !important; background-color: white !important; }
+                }
+            `}</style>
+
             {showTutorial && <TutorialModal onClose={closeTutorial} />}
             {showExportModal && <ExportModal onClose={() => setShowExportModal(false)} csvContent={csvContentToExport} fileName={exportFileName} />}
             {showInstallGuide && <InstallGuideModal onClose={() => setShowInstallGuide(false)} />}
             {repeatingTransaction && <RepeatModal onClose={() => setRepeatingTransaction(null)} onConfirm={confirmRepeat} transaction={repeatingTransaction} />}
+            {showCalculator && <CalculatorModal onClose={() => setShowCalculator(false)} onConfirm={handleCalculatorFinish} />}
+            
             {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{transactionCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${transactionCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
-            <Sidebar isOpen={showSidebar} onClose={() => setShowSidebar(false)} companies={companies} currentCompany={currentCompany} onChangeCompany={setCurrentCompany} onAddCompany={handleCreateCompany} onRenameCompany={handleRenameCompany} onOpenSettings={() => setShowSettings(true)} onOpenInstall={() => { handleInstallClick(); setShowSidebar(false); }} />
-            {showSettings && (<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden"><div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"><div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center"><h2 className="text-xl font-bold text-slate-800 dark:text-white">Configurar Subcategorias</h2><button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><LucideX size={24} /></button></div><div className="p-6 overflow-y-auto flex-1 space-y-8">{transactionCategories.map(cat => (<div key={cat.value}><h3 className={`font-bold text-sm uppercase mb-3 ${cat.color.split(' ')[0]}`}>{cat.label}</h3><div className="flex gap-2 mb-3"><input placeholder={`Nova para ${cat.label}`} className="flex-1 p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm outline-none focus:border-indigo-500 bg-white dark:bg-slate-900 dark:text-white" onKeyDown={(e) => { if (e.key === 'Enter') { setNewSubcatName(e.target.value); handleAddSubcategory(cat.value); e.target.value = ''; } }} onBlur={(e) => setNewSubcatName(e.target.value)} /><button onClick={(e) => { handleAddSubcategory(cat.value); e.previousSibling.value = ''; }} className="bg-indigo-600 text-white px-4 rounded-lg hover:bg-indigo-700"><LucidePlus size={18} /></button></div><div className="flex flex-wrap gap-2">{subcategories[cat.value]?.map(sub => (<div key={sub.id} className="bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 group"><span className="dark:text-slate-300">{sub.name}</span><button onClick={() => handleDeleteSubcategory(sub.id)} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><LucideX size={14} /></button></div>))}{(!subcategories[cat.value] || subcategories[cat.value].length === 0) && <span className="text-slate-400 text-sm italic">Nenhuma.</span>}</div></div>))}</div></div></div>)}
+            
+            <Sidebar 
+                isOpen={showSidebar} 
+                onClose={() => setShowSidebar(false)} 
+                companies={companies}
+                currentCompany={currentCompany}
+                onChangeCompany={setCurrentCompany}
+                onAddCompany={handleCreateCompany}
+                onRenameCompany={handleRenameCompany}
+                onOpenSettings={() => setShowSettings(true)}
+                onOpenInstall={() => { handleInstallClick(); setShowSidebar(false); }} 
+            />
+
+            {showSettings && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center"><h2 className="text-xl font-bold text-slate-800 dark:text-white">Configurar Subcategorias</h2><button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><LucideX size={24} /></button></div>
+                        <div className="p-6 overflow-y-auto flex-1 space-y-8">{transactionCategories.map(cat => (<div key={cat.value}><h3 className={`font-bold text-sm uppercase mb-3 ${cat.color.split(' ')[0]}`}>{cat.label}</h3><div className="flex gap-2 mb-3"><input placeholder={`Nova para ${cat.label}`} className="flex-1 p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm outline-none focus:border-indigo-500 bg-white dark:bg-slate-900 dark:text-white" onKeyDown={(e) => { if (e.key === 'Enter') { setNewSubcatName(e.target.value); handleAddSubcategory(cat.value); e.target.value = ''; } }} onBlur={(e) => setNewSubcatName(e.target.value)} /><button onClick={(e) => { handleAddSubcategory(cat.value); e.previousSibling.value = ''; }} className="bg-indigo-600 text-white px-4 rounded-lg hover:bg-indigo-700"><LucidePlus size={18} /></button></div><div className="flex flex-wrap gap-2">{subcategories[cat.value]?.map(sub => (<div key={sub.id} className="bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 group"><span className="dark:text-slate-300">{sub.name}</span><button onClick={() => handleDeleteSubcategory(sub.id)} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><LucideX size={14} /></button></div>))}{(!subcategories[cat.value] || subcategories[cat.value].length === 0) && <span className="text-slate-400 text-sm italic">Nenhuma.</span>}</div></div>))}</div>
+                    </div>
+                </div>
+            )}
 
             <header className="max-w-5xl mx-auto mb-6 p-4 md:p-8 pb-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
-                <div className="flex items-center gap-4"><button onClick={() => setShowSidebar(true)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200" title="Menu de Empresas"><LucideMenu size={28} /></button><div><h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Gestão Financeira</h1><p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1"><LucideBuilding2 size={14} />{currentCompany?.name}</p></div></div>
+                <div className="flex items-center gap-4">
+                    <button onClick={() => setShowSidebar(true)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200" title="Menu de Empresas"><LucideMenu size={28} /></button>
+                    <div><h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Gestão Financeira</h1><p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1"><LucideBuilding2 size={14} />{currentCompany?.name}</p></div>
+                    <button onClick={() => setShowCalculator(true)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-indigo-600 dark:text-indigo-400" title="Calculadora"><LucideCalculator size={24} /></button>
+                </div>
                 <div className="flex flex-wrap gap-3 items-center bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"><button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 dark:text-slate-300 mr-2" title={darkMode ? "Ativar Modo Claro" : "Ativar Modo Escuro"}>{darkMode ? <LucideSun size={20} /> : <LucideMoon size={20} />}</button><span className="text-sm font-medium text-slate-500 dark:text-slate-400 ml-2">Visualizando:</span><select className="bg-slate-100 dark:bg-slate-700 border-0 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select><select className="bg-slate-100 dark:bg-slate-700 border-0 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select><div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div><button onClick={handleExportCSV} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 p-2 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors" title="Exportar CSV (Copiar)"><LucideCopy size={20} /></button><button onClick={handlePrint} className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors" title="Imprimir / Visualizar Relatório"><LucidePrinter size={20} /></button></div>
             </header>
 
