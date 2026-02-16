@@ -41,7 +41,7 @@ const PERIOD_OPTIONS = [
     { value: 'Q3', label: '3º Trimestre' }, { value: 'Q4', label: '4º Trimestre' },
     { value: 'S1', label: '1º Semestre' }, { value: 'S2', label: '2º Semestre' },
     { value: 'Y', label: 'Ano Atual' },
-    { value: 'ALL', label: 'Todo o Período (Todos os Anos)' } // NOVA OPÇÃO
+    { value: 'ALL', label: 'Todo o Período (Todos os Anos)' }
 ];
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
@@ -109,7 +109,7 @@ const categoriesPersonal = [
 ];
 
 // *** VARIÁVEL DE SEGURANÇA OBRIGATÓRIA ***
-// Esta variável garante que o código nunca quebre se tentar acessá-la.
+// Garante que o código nunca quebre ao inicializar o state
 const transactionCategories = categoriesBusiness; 
 
 // ============================================================================
@@ -136,6 +136,7 @@ const safePercent = (value, total) => {
 // Cálculo financeiro unificado
 const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const safeData = Array.isArray(data) ? data : [];
+    // Seleção segura de categorias
     const cats = type === 'personal' ? categoriesPersonal : categoriesBusiness;
     
     const sumByType = (tType) => safeData.reduce((acc, t) => t.type === tType ? acc + (Number(t.amount) || 0) : acc, 0);
@@ -161,13 +162,13 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const safeAssets = Array.isArray(assets) ? assets : [];
     const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
     const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
-    
-    // Patrimônio: Bens + Investimentos + Saldo em Caixa
-    const patrimonioLiquido = totalBens + totalInvest + fluxoCaixa;
+    const patrimonioLiquido = (totalBens + totalInvest + fluxoCaixa);
 
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals, totalBens, totalInvest, patrimonioLiquido };
     
-    cats.forEach(cat => { financials[cat.value] = sumByType(cat.value); });
+    cats.forEach(cat => { 
+        financials[cat.value] = sumByType(cat.value); 
+    });
     
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
@@ -178,7 +179,7 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
 };
 
 // ============================================================================
-// 3. SUB-COMPONENTES (MÓDULOS)
+// 3. SUB-COMPONENTES
 // ============================================================================
 
 // --- ABA PATRIMÔNIO & MERCADO ---
@@ -196,14 +197,14 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                 const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
                 const dataCoins = await resCoins.json();
                 
-                // Índices via HG Brasil
+                // Índices via HG Brasil com Fallback
                 let hgData = { cdi: 11.25, selic: 11.25 }; 
                 try {
                     const key = '855e9e8f';
                     const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
                     const jsonHg = await resHg.json();
                     if(jsonHg.results && jsonHg.results[0]) hgData = jsonHg.results[0];
-                } catch(e) { console.log('API Limit', e); }
+                } catch(e) { console.log('HG Brasil CORS fallback'); }
 
                 setMarketData({
                     USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
@@ -257,8 +258,8 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.USD}</p></div>
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.EUR}</p></div>
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.BTC}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
                 </div>
             </div>
 
@@ -283,7 +284,7 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     );
 };
 
-// --- CHAT INTERFACE AVANÇADA (Versão 2.0) ---
+// --- CHAT INTERFACE AVANÇADA (Versão 2.1) ---
 const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
     const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou seu assistente financeiro.", sender: 'bot' }]);
     const [inputText, setInputText] = useState('');
@@ -298,13 +299,10 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
         let clean = text.replace(/[^0-9.,-]/g, '');
         // Lógica de parser brasileiro robusta
         if (clean.includes(',') && clean.includes('.')) {
-             // Formato 2.000,00 -> remove ponto, troca virgula por ponto
              clean = clean.replace(/\./g, '').replace(',', '.');
         } else if (clean.includes(',')) {
-             // Formato 200,00 -> troca virgula por ponto
              clean = clean.replace(',', '.');
         } else {
-             // Formato 2000 ou 2.000 -> remove ponto
              clean = clean.replace(/\./g, '');
         }
         return parseFloat(clean);
@@ -398,7 +396,13 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
         }, 500);
     };
 
-    // Enter apenas pula linha. Botão envia.
+    const handleKeyDown = (e) => { 
+        if (e.key === 'Enter' && !e.shiftKey) { 
+            e.preventDefault(); 
+        } 
+    }
+    
+    if (!isOpen) return null;
     return (
         <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 animate-fade-in-up h-[450px]">
             <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold">Assistente IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
@@ -410,6 +414,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
                     rows={1} 
                     value={inputText} 
                     onChange={e => setInputText(e.target.value)} 
+                    onKeyDown={handleKeyDown}
                 />
                 <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end"><LucideSend size={18} /></button>
             </div>
@@ -417,7 +422,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
     );
 };
 
-// ... OUTROS COMPONENTES AUXILIARES (Mantidos da versão estável) ...
+// ... OUTROS COMPONENTES AUXILIARES ...
 const CalculatorModal=({onClose,onConfirm})=>{const [e,setE]=useState('');const h=(v)=>{if(v==='C')setE('');else if(v==='='){try{setE(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))))}catch{setE('Erro')}}else setE(p=>p+v)};const c=()=>{try{onConfirm(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))).replace('.',','))}catch{}};const b=['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm"><div className="flex justify-between mb-4"><h3 className="font-bold dark:text-white">Calculadora</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-4 rounded mb-4 text-right font-bold dark:text-white text-2xl">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{b.map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded font-bold dark:text-white">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-slate-200 p-3 rounded">=</button></div><button onClick={c} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">USAR</button></div></div>)};
 const RepeatModal=({onClose,onConfirm,transaction})=>{const [c,setC]=useState(1);return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full"><h3 className="font-bold mb-4 dark:text-white">Repetir</h3><input type="number" value={c} onChange={e=>setC(e.target.value)} className="w-full p-2 border rounded mb-4 dark:bg-slate-900 dark:text-white"/><button onClick={()=>onConfirm(c)} className="w-full bg-indigo-600 text-white p-2 rounded">Confirmar</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Cancelar</button></div></div>)};
 const ExportModal=({onClose,csvContent,fileName})=>{const [c,setC]=useState(false);const r=useRef(null);const h=()=>{if(r.current){r.current.select();document.execCommand('copy');setC(true)}};return(<div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"><div className="bg-white p-6 rounded-xl max-w-lg w-full"><h3 className="font-bold text-lg mb-2">Exportar CSV</h3><textarea ref={r} readOnly value={csvContent} className="w-full h-32 p-2 border rounded mb-4 text-xs font-mono"/><button onClick={h} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">{c?'Copiado!':'Copiar'}</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Fechar</button></div></div>)};
@@ -721,6 +726,16 @@ export default function App() {
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { setDarkMode(true); }
+        const manifest = { "name": "Gestão Financeira", "short_name": "Finanças", "start_url": ".", "display": "standalone", "background_color": "#ffffff", "theme_color": "#4f46e5", "icons": [{ "src": "https://placehold.co/192x192/4f46e5/ffffff.png?text=$", "sizes": "192x192", "type": "image/png" }, { "src": "https://placehold.co/512x512/4f46e5/ffffff.png?text=$", "sizes": "512x512", "type": "image/png" }] };
+        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
+        const link = document.createElement('link'); link.rel = 'manifest'; link.href = URL.createObjectURL(manifestBlob); document.head.appendChild(link);
+        const handleBeforeInstallPrompt = (e) => { e.preventDefault(); setDeferredPrompt(e); };
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        const hasSeenTutorial = localStorage.getItem('hasSeenFinTutorial');
+        if (!hasSeenTutorial) setShowTutorial(true);
+        
+        if (Notification.permission === 'granted') setNotificationsEnabled(true);
+
         if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey.startsWith('AIza')) { console.error("FIREBASE CONFIG NÃO ENCONTRADA OU INVÁLIDA"); return; }
         const app = initializeApp(firebaseConfig);
         const _auth = getAuth(app);
@@ -988,7 +1003,7 @@ export default function App() {
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun/> : <LucideMoon/>}</button>
-                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={period} onChange={e => setPeriod(parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
                     <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
                     <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                     <button onClick={handleExportCSV} className="p-2 text-indigo-600"><LucideDownload/></button>
@@ -1058,4 +1073,18 @@ export default function App() {
                 {mainTab === 'patrimonio' && <AssetsView assets={assets} onAddAsset={handleAddAsset} onDeleteAsset={handleDeleteAsset} />}
                 
                 {mainTab === 'resultados' && (
-                    <div className="
+                    <div className="space-y-8">
+                         <div className="flex gap-2 overflow-x-auto pb-2">
+                            {['dre', 'fluxo', 'graficos', 'subcategorias'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-3 py-1 rounded-full text-sm font-bold ${resultTab === k ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{k.toUpperCase()}</button>))}
+                         </div>
+                         {resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} isPrintMode={false} />}
+                         {resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} isPrintMode={false} />}
+                         {resultTab === 'graficos' && <ChartsView allTransactions={transactions} companyType={companyType} />}
+                         {resultTab === 'subcategorias' && <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL} /></div>}
+                    </div>
+                )}
+            </main>
+            <button onClick={() => setShowChat(!showChat)} className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-xl hover:scale-105 transition-transform"><LucideMessageSquare size={24} /></button>
+        </div>
+    );
+}
