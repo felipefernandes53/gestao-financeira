@@ -6,12 +6,14 @@ import {
     getDoc, deleteDoc, updateDoc, orderBy, setDoc, writeBatch, where, getDocs
 } from 'firebase/firestore';
 import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { 
     Trash2 as LucideTrash2, Building2 as LucideBuilding2, Plus as LucidePlus, Edit2 as LucideEdit2, X as LucideX, Settings as LucideSettings, 
-    PieChart as LucidePieChart, Target as LucideTarget, ChevronDown as LucideChevronDown, ChevronRight as LucideChevronRight, Search as LucideSearch, 
-    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh, AlertCircle as LucideAlertCircle, UserCircle as LucideUserCircle
+    Target as LucideTarget, Search as LucideSearch, Home as LucideHome, RefreshCw as LucideRefresh, AlertCircle as LucideAlertCircle, 
+    UserCircle as LucideUserCircle, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Calculator as LucideCalculator, 
+    Menu as LucideMenu, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Briefcase as LucideBriefcase, User as LucideUser,
+    ArrowUpRight as LucideArrowUpRight
 } from 'lucide-react';
 
 // ============================================================================
@@ -42,8 +44,6 @@ const PERIOD_OPTIONS = [
     { value: 'Y', label: 'Ano Atual' },
     { value: 'ALL', label: 'Todo o Período' } 
 ];
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
 const TransactionTypeBusiness = { 
     RECEITA: 'Receita', CUSTO: 'Custo', DESPESA_OPERACIONAL: 'Despesa Operacional', JUROS_FINANCEIROS: 'Juros/Financeiro', IMPOSTOS: 'Impostos' 
@@ -112,14 +112,6 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const cats = type === 'personal' ? categoriesPersonal : categoriesBusiness;
     const sumByType = (tType) => safeData.reduce((acc, t) => t.type === tType ? acc + (Number(t.amount) || 0) : acc, 0);
     
-    const subcatTotals = {};
-    safeData.forEach(t => { 
-        if (t.subcategory) { 
-            const key = `${t.type}:${t.subcategory}`; 
-            subcatTotals[key] = (subcatTotals[key] || 0) + (Number(t.amount) || 0); 
-        } 
-    });
-
     const receitaKey = type === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
     const receita = sumByType(receitaKey);
     let totalSaidas = 0;
@@ -145,42 +137,56 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
 // 3. COMPONENTES DE INTERFACE
 // ============================================================================
 
-const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
+const AssetsView = ({ assets, onAddAsset, onUpdateAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
     const [type, setType] = useState('bens'); 
     const [indexer, setIndexer] = useState('');
-    const [marketData, setMarketData] = useState({ USD: '...', EUR: '...', BTC: '...', CDI: '...', SELIC: '...' });
+    const [editingId, setEditingId] = useState(null);
+    const [marketData, setMarketData] = useState({ CDI: '...', SELIC: '...' });
 
     useEffect(() => {
         const fetchMarketData = async () => {
             try {
-                const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
-                const dataCoins = await resCoins.json();
                 let hgData = { taxes: [{ cdi: 11.25, selic: 11.25 }] }; 
                 try {
                     const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=855e9e8f&format=json-cors`);
                     const jsonHg = await resHg.json();
                     if(jsonHg.results) hgData = jsonHg.results;
                 } catch(e) {}
-
-                setMarketData({
-                    USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
-                    EUR: `R$ ${parseFloat(dataCoins.EURBRL.bid).toFixed(2)}`,
-                    BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR')}`,
-                    CDI: `${hgData[0]?.cdi || 11.25}%`,
-                    SELIC: `${hgData[0]?.selic || 11.25}%`
-                });
-            } catch (err) { setMarketData({ USD: 'Erro', EUR: '-', BTC: '-', CDI: '11.25%', SELIC: '11.25%' }); }
+                setMarketData({ CDI: `${hgData[0]?.cdi || 11.25}%`, SELIC: `${hgData[0]?.selic || 11.25}%` });
+            } catch (err) { }
         };
         fetchMarketData();
     }, []);
 
-    const handleAdd = () => {
+    const handleSave = () => {
         const val = parseFloat(value.replace(/\./g, '').replace(',', '.')); 
         if (!name || isNaN(val)) return;
-        onAddAsset({ name, value: val, type, indexer, createdAt: Timestamp.now() });
-        setName(''); setValue(''); setIndexer('');
+        
+        const assetData = { name, value: val, type, indexer };
+        
+        if (editingId) {
+            onUpdateAsset(editingId, assetData);
+            setEditingId(null);
+        } else {
+            onAddAsset({ ...assetData, createdAt: Timestamp.now() });
+        }
+        
+        setName(''); setValue(''); setIndexer(''); setType('bens');
+    };
+
+    const handleEdit = (asset) => {
+        setName(asset.name);
+        setValue(asset.value.toString().replace('.', ','));
+        setType(asset.type);
+        setIndexer(asset.indexer || '');
+        setEditingId(asset.id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingId(null); setName(''); setValue(''); setIndexer(''); setType('bens');
     };
 
     const getDailyReturn = (val, idx) => {
@@ -190,6 +196,18 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
         if(idx === 'INCC') rate = 0.04;
         if(rate === 0) return 0;
         return (val * rate) / 365;
+    };
+
+    const getCorrectedValue = (asset) => {
+        const daily = getDailyReturn(asset.value, asset.indexer);
+        if (daily === 0 || !asset.createdAt) return asset.value;
+        
+        const now = new Date();
+        const created = asset.createdAt.toDate();
+        const diffTime = Math.abs(now - created);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        
+        return asset.value + (daily * diffDays);
     };
 
     return (
@@ -206,30 +224,54 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
             </div>
 
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white flex items-center gap-2"><LucidePlus className="text-indigo-600"/> Cadastrar Novo Patrimônio</h3>
+                <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white flex items-center gap-2">
+                    {editingId ? <LucideEdit2 className="text-indigo-600"/> : <LucidePlus className="text-indigo-600"/>} 
+                    {editingId ? 'Editar Patrimônio' : 'Cadastrar Novo Patrimônio'}
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
                     <input placeholder="Ex: Veículo Corolla" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
                     <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
                     <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
                 </div>
-                <button onClick={handleAdd} className="w-full mt-3 py-2 bg-indigo-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg"><LucidePlus size={18}/> Adicionar ao Patrimônio</button>
+                <div className="flex gap-2 mt-3">
+                    <button onClick={handleSave} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700">
+                        {editingId ? <LucideRefresh size={18}/> : <LucidePlus size={18}/>} 
+                        {editingId ? 'Atualizar' : 'Adicionar ao Patrimônio'}
+                    </button>
+                    {editingId && (
+                        <button onClick={handleCancelEdit} className="px-6 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-white rounded-lg font-bold transition-all">
+                            Cancelar
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                  <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
-                        <tr><th className="p-4">Item Patrimonial</th><th className="p-4">Tipo</th><th className="p-4">Reajuste</th><th className="p-4 text-right">Valor Atual</th><th className="p-4 text-right text-indigo-600">Rendimento Diário (Est.)</th><th className="p-4 w-10"></th></tr>
+                        <tr><th className="p-4">Item Patrimonial</th><th className="p-4">Tipo</th><th className="p-4">Reajuste</th><th className="p-4 text-right">Valor Inicial</th><th className="p-4 text-right text-indigo-600">Valor Corrigido</th><th className="p-4 text-right">Rend. Diário</th><th className="p-4 w-24">Ações</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
-                        {assets.map(a => (<tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
-                            <td className="p-4 font-bold">{a.name}</td>
-                            <td className="p-4"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${a.type === 'bens' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{a.type.toUpperCase()}</span></td>
-                            <td className="p-4 font-mono">{a.indexer || '-'}</td>
-                            <td className="p-4 text-right font-bold">{safeCurrency(a.value)}</td>
-                            <td className="p-4 text-right text-green-600 font-mono font-bold">+{safeCurrency(getDailyReturn(a.value, a.indexer))}</td>
-                            <td className="p-4"><button onClick={() => onDeleteAsset(a.id)} className="text-red-400 hover:text-red-600 transition-colors"><LucideTrash2 size={16}/></button></td>
-                        </tr>))}
+                        {assets.map(a => {
+                            const corrected = getCorrectedValue(a);
+                            return (
+                            <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                                <td className="p-4 font-bold">{a.name}</td>
+                                <td className="p-4"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${a.type === 'bens' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{a.type.toUpperCase()}</span></td>
+                                <td className="p-4 font-mono">{a.indexer || '-'}</td>
+                                <td className="p-4 text-right font-medium text-slate-500">{safeCurrency(a.value)}</td>
+                                <td className="p-4 text-right text-indigo-600 font-black flex items-center justify-end gap-1">
+                                    {a.indexer ? <LucideArrowUpRight size={14}/> : null}
+                                    {safeCurrency(corrected)}
+                                </td>
+                                <td className="p-4 text-right text-green-600 font-mono font-bold text-xs">+{safeCurrency(getDailyReturn(a.value, a.indexer))}</td>
+                                <td className="p-4 flex gap-2 justify-end">
+                                    <button onClick={() => handleEdit(a)} className="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"><LucideEdit2 size={16}/></button>
+                                    <button onClick={() => onDeleteAsset(a.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><LucideTrash2 size={16}/></button>
+                                </td>
+                            </tr>
+                        )})}
                     </tbody>
                  </table>
                  {assets.length === 0 && <div className="p-12 text-center text-slate-400 italic">Sua carteira de patrimônio está vazia.</div>}
@@ -238,26 +280,54 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     );
 };
 
-const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
+const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransaction, onAddAsset, currentCompany }) => {
     const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou o seu Assistente IA. Como posso ajudar na organização das suas finanças hoje?", sender: 'bot' }]);
     const [inputText, setInputText] = useState('');
-    const [lastActionId, setLastActionId] = useState(null);
     const messagesEndRef = useRef(null);
     const companyType = currentCompany?.type || 'business';
 
     const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     useEffect(() => { if (isOpen) scrollToBottom(); }, [messages, isOpen]);
 
-    const parseValue = (text) => {
-        let clean = text.replace(/[^0-9.,-]/g, '');
-        if (clean.includes(',') && clean.includes('.')) {
-             clean = clean.replace(/\./g, '').replace(',', '.');
-        } else if (clean.includes(',')) {
-             clean = clean.replace(',', '.');
-        } else {
-             clean = clean.replace(/\./g, '');
+    const detectCategory = (text, isIncome) => {
+        const t = text.toLowerCase();
+        
+        // Dicionário de Palavras-Chave
+        const keywords = {
+            business: {
+                [TransactionTypeBusiness.CUSTO]: ['fornecedor', 'mercadoria', 'estoque', 'frete', 'materia', 'peça', 'insumo'],
+                [TransactionTypeBusiness.DESPESA_OPERACIONAL]: ['aluguel', 'luz', 'agua', 'internet', 'salario', 'funcionario', 'marketing', 'prolabore', 'limpeza', 'manutencao', 'contador', 'sistema'],
+                [TransactionTypeBusiness.IMPOSTOS]: ['das', 'simples', 'icms', 'iss', 'darj', 'imposto', 'tributo', 'guia'],
+                [TransactionTypeBusiness.JUROS_FINANCEIROS]: ['banco', 'taxa', 'juros', 'emprestimo', 'financiamento', 'tarifa'],
+                [TransactionTypeBusiness.RECEITA]: ['venda', 'faturamento', 'pix', 'recebimento', 'serviço', 'cliente']
+            },
+            personal: {
+                [TransactionTypePersonal.ALIMENTACAO]: ['mercado', 'ifood', 'restaurante', 'lanche', 'pizza', 'hamburguer', 'comida', 'almoco', 'jantar', 'padaria'],
+                [TransactionTypePersonal.MORADIA]: ['aluguel', 'condominio', 'luz', 'agua', 'gas', 'energia', 'casa', 'apt'],
+                [TransactionTypePersonal.TRANSPORTE]: ['uber', '99', 'gasolina', 'posto', 'onibus', 'metro', 'combustivel', 'taxi', 'carro', 'moto'],
+                [TransactionTypePersonal.LAZER]: ['cinema', 'netflix', 'viagem', 'jogo', 'spotify', 'lazer', 'passeio', 'bar'],
+                [TransactionTypePersonal.SAUDE]: ['farmacia', 'medico', 'remedio', 'plano', 'dentista', 'hospital', 'exame'],
+                [TransactionTypePersonal.EDUCACAO]: ['curso', 'livro', 'faculdade', 'escola', 'aula', 'material'],
+                [TransactionTypePersonal.INVESTIMENTOS]: ['aporte', 'corretora', 'investimento'],
+                [TransactionTypePersonal.DIVIDAS]: ['cartao', 'fatura', 'divida', 'parcela'],
+                [TransactionTypePersonal.RECEITA]: ['salario', 'pix', 'deposito', 'venda', 'freela']
+            }
+        };
+
+        const currentDict = companyType === 'personal' ? keywords.personal : keywords.business;
+        
+        // 1. Tenta achar no dicionário
+        for (const [category, words] of Object.entries(currentDict)) {
+            if (words.some(word => t.includes(word))) return category;
         }
-        return parseFloat(clean);
+
+        // 2. Fallback inteligente se não achar palavra chave
+        if (isIncome) {
+            return companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
+        } else {
+            // Se for empresa, padrão é despesa operacional. Se pessoal, padrão é Alimentação (mas pode mudar para 'Outros' se tivesse)
+            return companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
+        }
     };
 
     const handleSend = async () => {
@@ -273,16 +343,14 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
             const quantityMatch = text.match(/(\d+)\s*meses/i);
             const months = quantityMatch ? parseInt(quantityMatch[1]) : 1;
             let textToSearchMoney = text;
-            if (quantityMatch) {
-                textToSearchMoney = text.replace(quantityMatch[0], '');
-            }
+            if (quantityMatch) textToSearchMoney = text.replace(quantityMatch[0], '');
 
             const moneyRegex = /(?:r\$|reais)?\s*(\d+(?:\.\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)/i;
             const moneyMatch = textToSearchMoney.match(moneyRegex);
             const amount = moneyMatch ? parseFloat(moneyMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
 
             const isAsset = ['investi', 'comprei', 'patrimonio', 'imovel', 'carro', 'cdb', 'fii', 'acoes'].some(w => lowerText.includes(w));
-            const isIncome = ['recebi', 'ganhei', 'faturamento', 'venda', 'lucro', 'entrada', 'salario'].some(w => lowerText.includes(w));
+            const isIncome = ['recebi', 'ganhei', 'faturamento', 'venda', 'lucro', 'entrada', 'salario', 'caiu'].some(w => lowerText.includes(w));
             const isRecurring = months > 1 || lowerText.includes('fixa') || lowerText.includes('todo mes');
 
             if (isAsset && amount > 0) {
@@ -296,25 +364,23 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
             }
             else if (isRecurring && amount > 0) {
                 const cleanDesc = text.replace(moneyMatch ? moneyMatch[0] : '', '').replace(quantityMatch ? quantityMatch[0] : '', '').replace(/(meses|por|durante|reais|fixa|despesa|R\$|todo mes|recorrente)/gi, '').trim();
-                const type = isIncome ? (companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA) 
-                                      : (companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL);
+                const type = detectCategory(lowerText, isIncome);
+                
                 try {
                     await onAddRecurringTransaction({ desc: cleanDesc || 'Recorrente', amount, type, months: months > 1 ? months : 12 });
-                    botResponse.text = `🔄 Agendado! "${cleanDesc || 'Despesa'}" de ${safeCurrency(amount)} mensalmente por ${months > 1 ? months : 12} meses. Já aparecem no seu planejamento futuro!`;
+                    botResponse.text = `🔄 Agendado! "${cleanDesc || 'Despesa'}" de ${safeCurrency(amount)} classificado como *${type}* mensalmente por ${months > 1 ? months : 12} meses.`;
                 } catch(e) { botResponse.text = "Erro ao processar as parcelas futuras."; }
             }
             else if (amount > 0) {
-                const type = isIncome ? (companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA) 
-                                      : (companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL);
+                const type = detectCategory(lowerText, isIncome);
                 const cleanDesc = text.replace(moneyMatch[0], '').replace(/(recebi|gastei|paguei|ganhei|de|com|na|no|reais|R\$)/gi, '').trim();
                 try {
-                    const newId = await onAddTransaction({ desc: cleanDesc || 'Lançamento IA', amount, type, subcategory: '', date: new Date() });
-                    setLastActionId(newId);
-                    botResponse.text = `✅ Lançamento de ${safeCurrency(amount)} em "${cleanDesc || 'Geral'}" concluído com sucesso.`;
+                    await onAddTransaction({ desc: cleanDesc || 'Lançamento IA', amount, type, subcategory: '', date: new Date() });
+                    botResponse.text = `✅ Lançamento de ${safeCurrency(amount)} em "${cleanDesc || 'Geral'}" classificado como *${type}* concluído com sucesso.`;
                 } catch(e) { botResponse.text = "Erro técnico ao guardar lançamento."; }
             }
             else {
-                botResponse.text = "Não consegui extrair os dados. Tente algo como: 'Gastei 150 no mercado' ou 'Aluguel 1200 fixa por 12 meses'.";
+                botResponse.text = "Não consegui extrair os dados. Tente algo como: 'Uber 35 reais' ou 'Recebi 1200 de aluguel'.";
             }
             setMessages(prev => [...prev, botResponse]);
         }, 500);
@@ -442,6 +508,7 @@ export default function App() {
     const [showUpdateMessage, setShowUpdateMessage] = useState(false);
     const [showInitialChoice, setShowInitialChoice] = useState(false);
     const [deletingRecurring, setDeletingRecurring] = useState(null);
+    const [confirmModal, setConfirmModal] = useState(null); // { title, message, onConfirm }
     const [budget, setBudget] = useState({});
 
     // Assistente IA Draggable State
@@ -468,9 +535,9 @@ export default function App() {
         const app = initializeApp(firebaseConfig);
         const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
         
-        const updateViews = parseInt(localStorage.getItem('upd_v46_final_v3') || '0');
-        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v46_final_v3', (updateViews + 1).toString()); }
-        if (!localStorage.getItem('hasSeenFinTutorial_v46')) setShowTutorial(true);
+        const updateViews = parseInt(localStorage.getItem('upd_v48_final') || '0');
+        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v48_final', (updateViews + 1).toString()); }
+        if (!localStorage.getItem('hasSeenFinTutorial_v48')) setShowTutorial(true);
 
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
     }, []);
@@ -485,15 +552,18 @@ export default function App() {
             setCompanies(comps);
             
             if (comps.length > 0) {
-                const lastId = localStorage.getItem('lastCompanyId');
-                const found = comps.find(c => c.id === lastId);
-                setCurrentCompany(found || comps[0]);
+                if (!currentCompany || !comps.find(c => c.id === currentCompany.id)) {
+                    const lastId = localStorage.getItem('lastCompanyId');
+                    const found = comps.find(c => c.id === lastId);
+                    setCurrentCompany(found || comps[0]);
+                }
             } else {
+                setCurrentCompany(null);
                 setShowInitialChoice(true);
             }
             setLoading(false);
         });
-    }, [user, db]);
+    }, [user, db, currentCompany]);
 
     useEffect(() => {
         if (!user || !db || !currentCompany) return;
@@ -531,6 +601,10 @@ export default function App() {
         if (!searchTerm.trim()) return filteredData;
         return filteredData.filter(t => t.desc.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [filteredData, searchTerm]);
+
+    const openConfirm = (title, message, onConfirm) => {
+        setConfirmModal({ title, message, onConfirm });
+    };
 
     const handleAddRecurringTransaction = async ({ desc, amount, type, months }) => {
         if (!user || !currentCompany) return;
@@ -602,13 +676,32 @@ export default function App() {
         setShowInitialChoice(false);
     };
 
+    const handleDeleteCompanyRequest = (companyId) => {
+        if (!user || !companyId) return;
+        openConfirm(
+            "Excluir Conta",
+            "Deseja realmente excluir esta conta? Os dados visuais serão removidos permanentemente.",
+            async () => {
+                await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies`, companyId));
+                if (companies.length <= 1) setShowInitialChoice(true);
+            }
+        );
+    };
+
+    const handleDeleteAssetRequest = (id) => {
+        openConfirm(
+            "Excluir Bem",
+            "Tem certeza que deseja remover este item do patrimônio?",
+            () => deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`, id))
+        );
+    };
+
     const handleCompanyChange = (company) => {
         setCurrentCompany(company);
         localStorage.setItem('lastCompanyId', company.id);
         setShowSidebar(false);
     };
 
-    // Lógica de Draggable (Mobile Touch)
     const handleTouchMove = (e) => {
         if (!isDragging) setIsDragging(true);
         const touch = e.touches[0];
@@ -676,7 +769,19 @@ export default function App() {
                                                 <span className={`font-black whitespace-nowrap text-lg ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
                                                 <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => handleEditClick(t)} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 rounded-xl mr-2"><LucideEdit2 size={18}/></button>
-                                                    <button onClick={() => { if(t.recurringId) setDeletingRecurring(t); else if(window.confirm("Apagar?")) handleDeleteSeries(t.id, false); }} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"><LucideTrash2 size={18}/></button>
+                                                    <button 
+                                                        onClick={() => { 
+                                                            if(t.recurringId) setDeletingRecurring(t); 
+                                                            else openConfirm(
+                                                                "Excluir Lançamento", 
+                                                                "Deseja apagar este lançamento?", 
+                                                                () => handleDeleteSeries(t.id, false)
+                                                            ); 
+                                                        }} 
+                                                        className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"
+                                                    >
+                                                        <LucideTrash2 size={18}/>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -688,7 +793,16 @@ export default function App() {
                 )}
 
                 {mainTab === 'planejamento' && <BudgetPlanningView budget={budget} subcategories={subcategories} onSaveBudget={async(b)=>await setDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/budgets/${year}_${period}`), b)} isMonthly={typeof period === 'number'} companyType={companyType} />}
-                {mainTab === 'patrimonio' && <AssetsView assets={assets} onAddAsset={d=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), d)} onDeleteAsset={id=>deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`, id))} />}
+                
+                {mainTab === 'patrimonio' && (
+                    <AssetsView 
+                        assets={assets} 
+                        onAddAsset={d=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), d)} 
+                        onUpdateAsset={(id, d)=>updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`, id), d)}
+                        onDeleteAsset={handleDeleteAssetRequest} 
+                    />
+                )}
+                
                 {mainTab === 'resultados' && (
                     <div className="space-y-8 animate-fade-in">
                          <CashFlowView transactions={filteredData} companyType={companyType} />
@@ -731,12 +845,24 @@ export default function App() {
                 </div>
             )}
 
-            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-8 py-4 rounded-full shadow-2xl z-[80] font-black animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer" onClick={()=>setShowUpdateMessage(false)}><LucideRocket/> NOVIDADE: ASSISTENTE IA APRENDEU RECORRÊNCIA E PATRIMÔNIO! <LucideX size={16}/></div>}
+            {confirmModal && (
+                <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full border dark:border-slate-700 animate-fade-in">
+                        <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">{confirmModal.title}</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mb-6">{confirmModal.message}</p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setConfirmModal(null)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-xl">Cancelar</button>
+                            <button onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-8 py-4 rounded-full shadow-2xl z-[80] font-black animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer" onClick={()=>setShowUpdateMessage(false)}><LucideRocket/> NOVIDADE: ASSISTENTE IA MAIS INTELIGENTE E VALOR CORRIGIDO! <LucideX size={16}/></div>}
             
-            {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v46', 'true')}} />}
+            {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v48', 'true')}} />}
             {showCalculator && <CalculatorModal onClose={()=>setShowCalculator(false)} onConfirm={v=>{setFormAmount(v); setShowCalculator(false)}} />}
             
-            {/* BOTÃO ASSISTENTE IA DRAGGABLE (MÓVEL) */}
             <button 
                 ref={chatBtnRef}
                 onTouchMove={handleTouchMove}
@@ -752,15 +878,34 @@ export default function App() {
                 <LucideMessageSquare size={32} />
             </button>
 
-            {showChat && <ChatInterface isOpen={true} onClose={()=>setShowChat(false)} onAddTransaction={async(d)=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`), {...d, createdAt: Timestamp.fromDate(d.date)})} onAddRecurringTransaction={handleAddRecurringTransaction} onAddAsset={d=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), d)} onUpdateTransaction={(id,d)=>updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id), d)} onDeleteTransaction={(id)=>deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id))} currentCompany={currentCompany} transactions={transactions} />}
-            <Sidebar isOpen={showSidebar} onClose={() => setShowSidebar(false)} companies={companies} currentCompany={currentCompany} onChangeCompany={handleCompanyChange} onAddCompany={handleCreateCompany} onOpenSettings={() => setShowSettings(true)} />
+            {showChat && <ChatInterface isOpen={true} onClose={()=>setShowChat(false)} onAddTransaction={async(d)=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`), {...d, createdAt: Timestamp.fromDate(d.date)})} onAddRecurringTransaction={handleAddRecurringTransaction} onAddAsset={d=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), d)} currentCompany={currentCompany} />}
+            <Sidebar isOpen={showSidebar} onClose={() => setShowSidebar(false)} companies={companies} currentCompany={currentCompany} onChangeCompany={handleCompanyChange} onAddCompany={handleCreateCompany} onDeleteCompany={handleDeleteCompanyRequest} />
         </div>
     );
 }
 
-function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onOpenSettings }){
+function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onDeleteCompany }){
     const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false); const [newType, setNewType] = useState('business');
-    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Suas Contas<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3 overflow-y-auto"> {companies.map(c => (<div key={c.id} onClick={() => onChangeCompany(c)} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400 transition-all"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><div className="flex gap-2"><button onClick={()=>setNewType('business')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='business'?'bg-indigo-100 border-indigo-600 text-indigo-700':'bg-white text-slate-400'}`}>Empresa</button><button onClick={()=>setNewType('personal')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='personal'?'bg-green-100 border-green-600 text-green-700':'bg-white text-slate-400'}`}>Pessoal</button></div><button onClick={()=>{onAddCompany(newName, newType); setNewName(''); setIsCreating(false);}} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
+    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> 
+        <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Suas Contas<button onClick={onClose}><LucideX/></button></div> 
+        <div className="p-4 flex flex-col h-[calc(100%-80px)]"> 
+            <div className="flex-1 space-y-3 overflow-y-auto"> 
+                {companies.map(c => (
+                    <div key={c.id} onClick={() => onChangeCompany(c)} className={`p-4 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all group ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> 
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> 
+                            <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> 
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); onDeleteCompany(c.id); }} className={`p-2 rounded-lg hover:bg-red-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100 ${currentCompany?.id === c.id ? 'text-indigo-200' : 'text-slate-400'}`}>
+                            <LucideTrash2 size={16}/>
+                        </button>
+                    </div>
+                ))} 
+                <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400 transition-all"> <LucidePlus size={20}/> Nova Conta </button> 
+                {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><div className="flex gap-2"><button onClick={()=>setNewType('business')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='business'?'bg-indigo-100 border-indigo-600 text-indigo-700':'bg-white text-slate-400'}`}>Empresa</button><button onClick={()=>setNewType('personal')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='personal'?'bg-green-100 border-green-600 text-green-700':'bg-white text-slate-400'}`}>Pessoal</button></div><button onClick={()=>{onAddCompany(newName, newType); setNewName(''); setIsCreating(false);}} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} 
+            </div> 
+        </div> 
+    </div> </>)
 }
 
 function CalculatorModal({onClose,onConfirm}){
@@ -778,10 +923,10 @@ function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
         { title: "BEM-VINDO!", desc: "Seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registrar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
-        { title: "ASSISTENTE IA", desc: "Dê ordens por texto ou voz ao Assistente IA. Ele entende recorrências e patrimônios automaticamente.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
-        { title: "PATRIMÔNIO", desc: "Registre bens e investimentos. O sistema projeta o rendimento diário estimado para você baseado em índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
-        { title: "ESTRATÉGIA", desc: "Analise seu DRE e Fluxo de Caixa. Use 'Todo o Período' para um panorama histórico total.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
+        { title: "ASSISTENTE + ESPERTO", desc: "Agora ele entende suas palavras! Digite 'Uber' e ele sabe que é Transporte. 'Mercado' vira Alimentação.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
+        { title: "VALOR CORRIGIDO", desc: "No seu Patrimônio, veja quanto seu dinheiro já rendeu automaticamente na nova coluna.", icon: <LucideTrendingUp size={48} className="text-green-500"/> },
+        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registrar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-indigo-500"/> },
+        { title: "PATRIMÔNIO", desc: "Registre bens e investimentos. Agora com cálculo de correção monetária.", icon: <LucideHome size={48} className="text-amber-500"/> }
     ];
     return (<div className="fixed inset-0 bg-indigo-600 z-[200] flex items-center justify-center p-6 text-white text-center animate-fade-in"><div className="max-w-sm space-y-8">
         <div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl animate-bounce">{slides[step].icon}</div>
@@ -820,16 +965,37 @@ function ChartsView({ allTransactions, companyType }){
             if (!groups[key]) groups[key] = [];
             groups[key].push(t);
         });
-        return Object.keys(groups).map(key => {
+
+        // Sort keys chronologically
+        const sortedKeys = Object.keys(groups).sort((a, b) => {
+            const [yA, mA] = a.split('-').map(Number);
+            const [yB, mB] = b.split('-').map(Number);
+            return yA - yB || mA - mB;
+        });
+
+        let accumulatedBalance = 0;
+
+        return sortedKeys.map(key => {
             const [yearStr, monthStr] = key.split('-');
             const fins = calculateFinancials(groups[key], companyType);
-            return { name: `${MONTHS[parseInt(monthStr)]}/${yearStr.slice(2)}`, Saldo: fins.fluxoCaixa, year: parseInt(yearStr), month: parseInt(monthStr) };
-        }).sort((a, b) => a.year - b.year || a.month - b.month).slice(-12);
+            
+            // "Arraste" o saldo: Soma o resultado deste mês ao acumulado anterior
+            accumulatedBalance += fins.fluxoCaixa;
+
+            return { 
+                name: `${MONTHS[parseInt(monthStr)]}/${yearStr.slice(2)}`, 
+                Saldo: accumulatedBalance, // Mostra o acumulado no gráfico
+                Mensal: fins.fluxoCaixa,
+                year: parseInt(yearStr), 
+                month: parseInt(monthStr) 
+            };
+        }).slice(-12); // Pega os ultimos 12 meses registrados
     }, [allTransactions, companyType]);
 
     return (
         <div className="h-80 bg-white dark:bg-slate-800 p-4 rounded-xl border dark:border-slate-700 shadow-sm">
-            <ResponsiveContainer width="100%" height="100%"><LineChart data={lineData}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="name" fontSize={10} /><YAxis fontSize={10} /><Tooltip formatter={(value) => safeCurrency(value)} /><Legend /><Line type="monotone" dataKey="Saldo" stroke="#4f46e5" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer>
+            <h3 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest text-center">Evolução de Saldo Acumulado</h3>
+            <ResponsiveContainer width="100%" height="90%"><LineChart data={lineData}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="name" fontSize={10} /><YAxis fontSize={10} /><Tooltip formatter={(value) => safeCurrency(value)} /><Legend /><Line type="monotone" dataKey="Saldo" stroke="#4f46e5" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer>
         </div>
     );
 }
