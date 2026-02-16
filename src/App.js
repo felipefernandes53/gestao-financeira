@@ -73,8 +73,6 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-const transactionCategories = categoriesBusiness; 
-
 // ============================================================================
 // 2. FUNÇÕES AUXILIARES
 // ============================================================================
@@ -108,8 +106,8 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     cats.forEach(cat => { if (!cat.isPositive) totalSaidas += sumByType(cat.value); });
     const fluxoCaixa = receita - totalSaidas;
     
-    const totalBens = assets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
-    const totalInvest = assets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
+    const totalBens = (assets || []).filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
+    const totalInvest = (assets || []).filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
     const patrimonioLiquido = (totalBens + totalInvest + fluxoCaixa);
 
     const financials = { receita, totalSaidas, fluxoCaixa, totalBens, totalInvest, patrimonioLiquido };
@@ -124,7 +122,7 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
 };
 
 // ============================================================================
-// 3. COMPONENTES
+// 3. COMPONENTES DE INTERFACE
 // ============================================================================
 
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
@@ -187,11 +185,22 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                 </div>
             </div>
 
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado Financeiro</h3>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Dólar</p><p className="font-bold text-sm">{marketData.USD}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Euro</p><p className="font-bold text-sm">{marketData.EUR}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Bitcoin</p><p className="font-bold text-sm">{marketData.BTC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">CDI</p><p className="font-bold text-sm">{marketData.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Selic</p><p className="font-bold text-sm">{marketData.SELIC}</p></div>
+                </div>
+            </div>
+
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                 <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white flex items-center gap-2"><LucidePlus className="text-indigo-600"/> Cadastrar Novo Patrimônio</h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
-                    <input placeholder="Ex: ViVaz Barra Funda" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input placeholder="Ex: Veículo Corolla" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
                     <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
                     <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
                 </div>
@@ -220,9 +229,8 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     );
 };
 
-// --- CHAT INTERFACE (INTELIGÊNCIA LORD) ---
 const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
-    const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou o seu assistente financeiro de elite. Como posso organizar o seu império hoje?", sender: 'bot' }]);
+    const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou o seu Assistente IA. Como posso ajudar na organização das suas finanças hoje?", sender: 'bot' }]);
     const [inputText, setInputText] = useState('');
     const [lastActionId, setLastActionId] = useState(null);
     const messagesEndRef = useRef(null);
@@ -230,6 +238,18 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
 
     const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     useEffect(() => { if (isOpen) scrollToBottom(); }, [messages, isOpen]);
+
+    const parseValue = (text) => {
+        let clean = text.replace(/[^0-9.,-]/g, '');
+        if (clean.includes(',') && clean.includes('.')) {
+             clean = clean.replace(/\./g, '').replace(',', '.');
+        } else if (clean.includes(',')) {
+             clean = clean.replace(',', '.');
+        } else {
+             clean = clean.replace(/\./g, '');
+        }
+        return parseFloat(clean);
+    };
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
@@ -241,12 +261,9 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
-            // --- CÉREBRO LORD NLP 4.5 ---
-            // Extração precisa de valores e exclusão de números que indicam meses
+            // Lógica de extração de meses vs valor
             const quantityMatch = text.match(/(\d+)\s*meses/i);
             const months = quantityMatch ? parseInt(quantityMatch[1]) : 1;
-
-            // Remove o número de meses do texto antes de procurar o valor em dinheiro
             let textToSearchMoney = text;
             if (quantityMatch) {
                 textToSearchMoney = text.replace(quantityMatch[0], '');
@@ -256,9 +273,9 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
             const moneyMatch = textToSearchMoney.match(moneyRegex);
             const amount = moneyMatch ? parseFloat(moneyMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
 
-            const isAsset = ['investi', 'comprei', 'patrimonio', 'imovel', 'carro', 'cdb', 'fii', 'acoes'].some(w => lowerText.includes(w));
+            const isAsset = ['investi', 'comprei', 'patrimonio', 'carro', 'cdb', 'fii', 'acoes'].some(w => lowerText.includes(w));
             const isIncome = ['recebi', 'ganhei', 'faturamento', 'venda', 'lucro', 'entrada', 'salario'].some(w => lowerText.includes(w));
-            const isRecurring = months > 1 || lowerText.includes('fixa') || lowerText.includes('todo mes') || lowerText.includes('recorrente');
+            const isRecurring = months > 1 || lowerText.includes('fixa') || lowerText.includes('todo mes');
 
             if (isAsset && amount > 0) {
                 const name = text.replace(moneyMatch[0], '').replace(/(investi|comprei|um|uma|no|na|em|reais|R\$|patrimonio|carro|imovel|cdb)/gi, '').trim();
@@ -266,7 +283,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
                 let idx = lowerText.includes('cdi') ? 'CDI' : lowerText.includes('ipca') ? 'IPCA' : lowerText.includes('incc') ? 'INCC' : '';
                 try {
                     await onAddAsset({ name: name || 'Novo Patrimônio', value: amount, type, indexer: idx, createdAt: Timestamp.now() });
-                    botResponse.text = `🏛️ Registrei o ${type} "${name || 'Patrimônio'}" no valor de ${safeCurrency(amount)} na sua aba de PATRIMÔNIO. O rendimento estimado já está sendo projetado!`;
+                    botResponse.text = `🏛️ Registrei o ${type} "${name || 'Patrimônio'}" no valor de ${safeCurrency(amount)} na sua aba de PATRIMÔNIO.`;
                 } catch(e) { botResponse.text = "Desculpe, falhei ao gravar este bem."; }
             }
             else if (isRecurring && amount > 0) {
@@ -307,16 +324,84 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
                 <div ref={messagesEndRef} />
             </div>
             <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2 shadow-inner">
-                <textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none max-h-32" placeholder="Dê a sua ordem..." rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
+                <textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none max-h-32" placeholder="Digite aqui..." rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
                 <button onClick={handleSend} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end shadow-md transition-all active:scale-95"><LucideSend size={18} /></button>
             </div>
         </div>
     );
 };
 
-// ============================================================================
-// 4. COMPONENTE PRINCIPAL (APP)
-// ============================================================================
+const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, companyType }) => {
+    const [localBudget, setLocalBudget] = useState({});
+    const [localSubBudget, setLocalSubBudget] = useState({});
+    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
+
+    useEffect(() => {
+        setLocalBudget(budget || {});
+        setLocalSubBudget(budget?.subcategories || {});
+    }, [budget]);
+
+    if (!isMonthly) return <div className="p-12 text-center text-slate-400 font-medium bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed">Selecione um mês para planear as metas do seu império.</div>;
+
+    const handleMainChange = (type, value) => setLocalBudget(prev => ({ ...prev, [type]: parseFloat(value) || 0 }));
+    const handleSubChange = (type, subName, value) => {
+        const key = `${type}:${subName}`;
+        const numVal = parseFloat(value) || 0;
+        setLocalSubBudget(prev => {
+            const newSubs = { ...prev, [key]: numVal };
+            const currentTypeSubs = Object.entries(newSubs).filter(([k]) => k.startsWith(type + ':')).reduce((sum, [, val]) => sum + val, 0);
+            setLocalBudget(prevMain => ({ ...prevMain, [type]: currentTypeSubs }));
+            return newSubs;
+        });
+    };
+
+    return (
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border shadow-sm animate-fade-in">
+            <h2 className="text-xl font-black mb-8 flex items-center gap-3 text-slate-800 dark:text-white uppercase tracking-tighter"><LucideTarget className="text-indigo-600" /> Metas Orçamentárias</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {cats.map(cat => (
+                    <div key={cat.value} className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border dark:border-slate-700">
+                        <div className="flex justify-between items-center mb-5">
+                            <h3 className={`font-black text-xs uppercase tracking-widest ${cat.color.split(' ')[0]}`}>{cat.label}</h3>
+                            <div className="relative w-36"><span className="absolute left-3 top-2 text-slate-400 text-xs font-bold">R$</span><input type="number" value={localBudget[cat.value] || ''} onChange={e => handleMainChange(cat.value, e.target.value)} className="w-full pl-8 p-2 text-right border rounded-lg bg-white dark:bg-slate-800 font-bold" /></div>
+                        </div>
+                        <div className="space-y-3">
+                            {(subcategories[cat.value] || []).map(sub => (
+                                <div key={sub.id} className="flex justify-between items-center text-sm group">
+                                    <span className="text-slate-500 font-medium group-hover:text-slate-800 transition-colors">{sub.name}</span>
+                                    <input type="number" value={localSubBudget[`${cat.value}:${sub.name}`] || ''} onChange={e => handleSubChange(cat.value, sub.name, e.target.value)} className="w-28 p-1.5 text-right border rounded-md bg-white dark:bg-slate-800 text-xs font-bold" placeholder="0,00" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <button onClick={() => onSaveBudget({ ...localBudget, subcategories: localSubBudget })} className="w-full mt-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95 uppercase tracking-widest">GUARDAR PLANEAMENTO</button>
+        </div>
+    );
+};
+
+const DREView = ({ transactions, companyType }) => {
+    const real = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
+    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
+    return (
+        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl overflow-hidden border dark:border-slate-800 animate-fade-in">
+            <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-900/50 p-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"><div>Descrição da Linha</div><div className="text-right">Realizado (R$)</div></div>
+            <div className="divide-y dark:divide-slate-700">
+                {cats.map(c => (
+                    <div key={c.value} className="flex justify-between p-5 items-center hover:bg-slate-50 dark:hover:bg-slate-900/20 transition-colors">
+                        <span className="font-bold text-sm text-slate-600 dark:text-slate-300 uppercase tracking-tight">{c.label}</span>
+                        <span className={`font-black text-base ${c.isPositive ? 'text-green-600' : 'text-red-500'}`}>{c.isPositive ? '' : '-'}{safeCurrency(real[c.value] || 0)}</span>
+                    </div>
+                ))}
+                <div className="flex justify-between p-8 items-center bg-indigo-50/50 dark:bg-indigo-900/10">
+                    <span className="font-black text-indigo-950 dark:text-indigo-200 text-xl uppercase italic tracking-tighter">Saldo Acumulado</span>
+                    <span className={`font-black text-3xl ${real.fluxoCaixa >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>{safeCurrency(real.fluxoCaixa)}</span>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default function App() {
     const [user, setUser] = useState(null);
@@ -325,7 +410,6 @@ export default function App() {
     const [currentCompany, setCurrentCompany] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [subcategories, setSubcategories] = useState({});
-    const [budget, setBudget] = useState({});
     const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [mainTab, setMainTab] = useState('lancamentos');
@@ -356,36 +440,26 @@ export default function App() {
 
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { setDarkMode(true); }
+        if (savedTheme === 'dark') setDarkMode(true);
         const app = initializeApp(firebaseConfig);
         const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
         
-        // Mensagem de Atualização (Max 2 vezes)
-        const updateViews = parseInt(localStorage.getItem('lordUpdateViews_v46') || '0');
-        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('lordUpdateViews_v46', (updateViews + 1).toString()); }
-        
-        // Tutorial renovado
+        const updateViews = parseInt(localStorage.getItem('upd_v46') || '0');
+        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v46', (updateViews + 1).toString()); }
         if (!localStorage.getItem('hasSeenFinTutorial_v46')) setShowTutorial(true);
 
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
     }, []);
 
-    useEffect(() => { if (darkMode) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); } }, [darkMode]);
+    useEffect(() => { if (darkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [darkMode]);
 
-    // Data Loading
     useEffect(() => {
         if (!user || !db) return;
         const q = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies`), orderBy('createdAt', 'asc'));
         return onSnapshot(q, (snap) => {
             const comps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             setCompanies(comps);
-            const lastId = localStorage.getItem('lastCompanyId');
-            const found = comps.find(c => c.id === lastId);
-            if (comps.length > 0 && !currentCompany) setCurrentCompany(found || comps[0]);
-            if (comps.length === 0 && !currentCompany) {
-                 const newCompRef = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies`));
-                 setDoc(newCompRef, { name: 'Minha Empresa', type: 'business', createdAt: Timestamp.now() });
-            }
+            if (comps.length > 0 && !currentCompany) setCurrentCompany(comps[0]);
             setLoading(false);
         });
     }, [user, db]);
@@ -403,12 +477,11 @@ export default function App() {
         return () => { unsubTx(); unsubSub(); unsubAssets(); };
     }, [user, db, currentCompany]);
 
-    // FILTRO GLOBAL (CORRIGIDO PARA "TUDO")
     const filteredData = useMemo(() => {
         return transactions.filter(t => {
             if (!t.createdAt) return false;
             const d = t.createdAt.toDate();
-            if (period === 'ALL') return true; // MOSTRA TUDO DE TODOS OS ANOS
+            if (period === 'ALL') return true; 
             if (d.getUTCFullYear() !== year) return false;
             const txMonth = d.getUTCMonth();
             if (typeof period === 'number') return txMonth === period;
@@ -423,7 +496,6 @@ export default function App() {
         return filteredData.filter(t => t.desc.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [filteredData, searchTerm]);
 
-    // CORE: ADICIONAR RECORRENTE (BATCH)
     const handleAddRecurringTransaction = async ({ desc, amount, type, months }) => {
         if (!user || !currentCompany) return;
         const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
@@ -432,8 +504,7 @@ export default function App() {
         const today = new Date();
         for (let i = 0; i < months; i++) {
             const d = new Date(today.getFullYear(), today.getMonth() + i, today.getDate(), 12, 0, 0);
-            const newDocRef = doc(collectionRef);
-            batch.set(newDocRef, { desc: `${desc} (${i+1}/${months})`, amount, type, recurringId: seriesId, createdAt: Timestamp.fromDate(d) });
+            batch.set(doc(collectionRef), { desc: `${desc} (${i+1}/${months})`, amount, type, recurringId: seriesId, createdAt: Timestamp.fromDate(d) });
         }
         await batch.commit();
     };
@@ -459,7 +530,6 @@ export default function App() {
         if (isNaN(val)) return;
         const date = new Date(formDate + 'T12:00:00');
         const ref = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
-        
         if (editingTransaction) {
             await updateDoc(doc(ref, editingTransaction.id), { desc: formDesc, amount: val, type: formType, subcategory: formSubcat });
         } else if (isRecurring && recurringMonths > 1) {
@@ -470,7 +540,7 @@ export default function App() {
         setEditingTransaction(null); setFormDesc(''); setFormAmount(''); setIsRecurring(false);
     };
 
-    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">A preparar o seu império financeiro...</p></div>;
+    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">Preparando o seu sistema...</p></div>;
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-500 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
@@ -478,7 +548,7 @@ export default function App() {
                 <div className="flex items-center gap-4">
                     <button onClick={()=>setShowSidebar(true)} className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-md"><LucideMenu size={28} /></button>
                     <div><h1 className="text-3xl font-black tracking-tighter">Gestão Financeira</h1><p className="text-xs text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-1"><LucideBuilding2 size={12} /> {currentCompany?.name}</p></div>
-                    <button onClick={()=>setShowCalculator(true)} className="p-2 text-indigo-600 hover:scale-110 transition-transform"><LucideCalculator size={24}/></button>
+                    <button onClick={()=>setShowCalculator(true)} className="p-2 text-indigo-600"><LucideCalculator size={24}/></button>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     <button onClick={()=>setDarkMode(!darkMode)} className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun className="text-amber-400"/> : <LucideMoon className="text-indigo-600"/>}</button>
@@ -488,7 +558,6 @@ export default function App() {
             </header>
 
             <main className="max-w-5xl mx-auto p-4">
-                {/* ABAS COM ACENTO E MAIÚSCULAS */}
                 <div className="flex overflow-x-auto gap-4 mb-8 no-print border-b dark:border-slate-800">
                     {['lancamentos', 'planejamento', 'patrimonio', 'resultados'].map(t => (
                         <button key={t} onClick={() => setMainTab(t)} className={`px-6 py-4 font-black transition-all border-b-4 ${mainTab === t ? 'border-indigo-600 text-indigo-600 scale-105' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
@@ -505,23 +574,23 @@ export default function App() {
                                 <form onSubmit={handleSaveTransaction} className="space-y-5">
                                     <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
                                     <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500 dark:text-white">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
-                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="O que deseja registar?" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
+                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Descrição do item" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
                                     <div className="relative"><span className="absolute left-4 top-4 font-black text-slate-400">R$</span><input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-4 pl-12 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-black text-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" /></div>
-                                    {!editingTransaction && (<div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border"><div className="flex items-center gap-3"><input type="checkbox" id="rec" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-0" /><label htmlFor="rec" className="font-black text-xs uppercase tracking-widest text-slate-500">Repetir por meses?</label></div>{isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(parseInt(e.target.value))} className="w-16 p-2 rounded-lg bg-white dark:bg-slate-800 text-center font-bold" />}</div>)}
-                                    <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all uppercase tracking-widest active:scale-95">GRAVAR NO LIVRO</button>
+                                    {!editingTransaction && (<div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border"><div className="flex items-center gap-3"><input type="checkbox" id="rec" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-6 h-6 rounded-lg text-indigo-600" /><label htmlFor="rec" className="font-black text-xs uppercase tracking-widest text-slate-500">Fixa Mensal?</label></div>{isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(parseInt(e.target.value))} className="w-16 p-2 rounded-lg bg-white dark:bg-slate-800 text-center font-bold" />}</div>)}
+                                    <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95">REGISTRAR</button>
                                 </form>
                             </div>
                         </div>
                         <div className="lg:col-span-3">
                             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border dark:border-slate-800 h-[700px] flex flex-col overflow-hidden">
-                                <div className="p-6 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><span className="font-black uppercase text-xs tracking-[0.2em] text-slate-400">Fluxo de Movimentação</span><div className="relative"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Procurar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-white dark:bg-slate-950 rounded-xl text-xs w-48 outline-none border dark:border-slate-700" /></div></div>
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
+                                <div className="p-6 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><span className="font-black uppercase text-xs tracking-widest text-slate-400">Fluxo de Movimentação</span><div className="relative"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Procurar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-white dark:bg-slate-950 rounded-xl text-xs w-48 outline-none border dark:border-slate-700" /></div></div>
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
                                     {searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (
-                                        <div key={t.id} className="p-5 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl flex justify-between items-center hover:shadow-lg transition-all group">
-                                            <div className="truncate"><p className="font-black truncate text-sm uppercase leading-tight">{t.desc}</p><p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-tighter">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
+                                        <div key={t.id} className="p-5 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl flex justify-between items-center group transition-all">
+                                            <div className="truncate"><p className="font-black truncate text-sm uppercase">{t.desc}</p><p className="text-[10px] text-slate-400 font-black mt-1 uppercase">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
                                             <div className="flex items-center gap-4">
                                                 <span className={`font-black whitespace-nowrap text-lg ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
-                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => { if(t.recurringId) setDeletingRecurring(t); else if(window.confirm("Apagar este lançamento?")) handleDeleteSeries(t.id, false); }} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"><LucideTrash2 size={18}/></button></div>
+                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => { if(t.recurringId) setDeletingRecurring(t); else if(window.confirm("Apagar?")) handleDeleteSeries(t.id, false); }} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"><LucideTrash2 size={18}/></button></div>
                                             </div>
                                         </div>
                                     ))}
@@ -545,13 +614,12 @@ export default function App() {
                 )}
             </main>
 
-            {/* MODAL DE EXCLUSÃO INTELIGENTE */}
             {deletingRecurring && (
                 <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
                     <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border dark:border-slate-700">
                         <LucideAlertCircle className="mx-auto text-amber-500 mb-4" size={48} />
-                        <h3 className="text-xl font-black mb-2 uppercase tracking-tighter">Item Recorrente</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Este item faz parte de uma série. Deseja apagar apenas esta parcela ou toda a sequência futura?</p>
+                        <h3 className="text-xl font-black mb-2 uppercase">Série Recorrente</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Deseja apagar apenas esta parcela ou toda a sequência futura?</p>
                         <div className="space-y-3">
                             <button onClick={()=>handleDeleteSeries(deletingRecurring.id, false)} className="w-full py-4 bg-slate-100 dark:bg-slate-700 font-bold rounded-2xl">Apagar APENAS ESTE</button>
                             <button onClick={()=>handleDeleteSeries(deletingRecurring.id, true)} className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg">Apagar TODA A SÉRIE</button>
@@ -561,7 +629,6 @@ export default function App() {
                 </div>
             )}
 
-            {/* MENSAGEM DE ATUALIZAÇÃO */}
             {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-8 py-4 rounded-full shadow-2xl z-[80] font-black animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer" onClick={()=>setShowUpdateMessage(false)}><LucideRocket/> IA APRENDEU RECORRÊNCIA E PATRIMÔNIO! <LucideX size={16}/></div>}
             
             {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v46', 'true')}} />}
@@ -576,7 +643,7 @@ export default function App() {
 // COMPONENTES AUXILIARES REORGANIZADOS
 function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onRenameCompany, onOpenSettings }){
     const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false);
-    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Suas Contas<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><button onClick={()=>onAddCompany(newName, 'business')} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
+    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Contas Ativas<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><button onClick={()=>onAddCompany(newName, 'business')} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
 }
 
 function CalculatorModal({onClose,onConfirm}){
@@ -587,39 +654,53 @@ function CalculatorModal({onClose,onConfirm}){
             try{ const calc = new Function('return ' + e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.')); setE(String(calc())); }catch{setE('Erro')}
         }else setE(p=>p+v)
     };
-    return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl"><div className="flex justify-between mb-4 font-black uppercase text-[10px] text-indigo-600 tracking-widest">Calculadora Inteligente<button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl mb-4 text-right font-black text-3xl overflow-hidden">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'].map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl font-black text-xl hover:bg-indigo-50">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-indigo-600 text-white p-4 rounded-xl font-black text-xl">=</button></div><button onClick={()=>onConfirm(e.replace('.',','))} className="w-full bg-slate-800 text-white p-4 rounded-xl font-black uppercase tracking-widest">Usar Valor</button></div></div>)
+    return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl"><div className="flex justify-between mb-4 font-black uppercase text-[10px] text-indigo-600 tracking-widest">Calculadora IA<button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl mb-4 text-right font-black text-3xl overflow-hidden">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'].map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl font-black text-xl hover:bg-indigo-50">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-indigo-600 text-white p-4 rounded-xl font-black text-xl">=</button></div><button onClick={()=>onConfirm(e.replace('.',','))} className="w-full bg-slate-800 text-white p-4 rounded-xl font-black uppercase tracking-widest">Usar Valor</button></div></div>)
 }
 
 function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
-        { title: "BEM-VINDO!", desc: "O seu império financeiro agora tem cérebro próprio. Vamos começar?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
-        { title: "ASSISTENTE IA", desc: "O botão de chat permite dar ordens. Diga: 'Internet 100 reais fixa por 12 meses' e o sistema gera os lançamentos futuros automaticamente para o seu planeamento.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
-        { title: "PATRIMÔNIO", desc: "Registe bens e investimentos. O sistema projeta o rendimento diário estimado para você baseado em índices como CDI ou IPCA.", icon: <LucideHome size={48} className="text-amber-500"/> },
-        { title: "ESTRATÉGIA", desc: "Em RESULTADOS, analise seu DRE e Fluxo de Caixa. Use a opção 'Todo o Período' para ver o histórico completo da conta.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
+        { title: "BEM-VINDO!", desc: "Seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
+        { title: "LANÇAMENTOS", desc: "Registe tudo rapidamente. Use a opção de recorrência para despesas fixas.", icon: <LucidePlus size={48} className="text-green-500"/> },
+        { title: "ASSISTENTE IA", desc: "Dê ordens por texto ou voz. 'Internet 100 reais fixa por 12 meses' cria automaticamente os lançamentos futuros.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
+        { title: "PATRIMÔNIO", desc: "Controle bens e investimentos com rendimento diário estimado por índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
+        { title: "ESTRATÉGIA", desc: "Analise seu DRE e Fluxo de Caixa. Use 'Todo o Período' para um panorama histórico total.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
     ];
-    return (<div className="fixed inset-0 bg-indigo-600 z-[200] flex items-center justify-center p-6 text-white text-center animate-fade-in"><div className="max-w-sm space-y-8"><div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl animate-bounce">{slides[step].icon}</div><h2 className="text-3xl font-black italic tracking-tighter uppercase">{slides[step].title}</h2><p className="text-lg font-medium opacity-90">{slides[step].desc}</p><div className="flex gap-2 justify-center">{slides.map((_,i)=><div key={i} className={`h-2 w-2 rounded-full ${i===step?'bg-white w-8':'bg-indigo-400'} transition-all`}/>)}</div><button onClick={()=>step<slides.length-1?setStep(step+1):onClose()} className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all">{step<slides.length-1?'PRÓXIMO':'ESTOU PRONTO!'}</button></div></div>)
+    return (<div className="fixed inset-0 bg-indigo-600 z-[200] flex items-center justify-center p-6 text-white text-center animate-fade-in"><div className="max-w-sm space-y-8"><div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl animate-bounce">{slides[step].icon}</div><h2 className="text-3xl font-black italic tracking-tighter uppercase">{slides[step].title}</h2><p className="text-lg font-medium opacity-90">{slides[step].desc}</p><div className="flex gap-2 justify-center">{slides.map((_,i)=><div key={i} className={`h-2 w-2 rounded-full ${i===step?'bg-white w-8':'bg-indigo-400'} transition-all`}/>)}</div><button onClick={()=>step<slides.length-1?setStep(step+1):onClose()} className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all">{step<slides.length-1?'PRÓXIMO':'ENTREI NO COMANDO!'}</button></div></div>)
 }
 
-function DREView({ transactions, companyType }){
-    const real = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
-    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
+function CashFlowView({ transactions, companyType }){
+    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl overflow-hidden border dark:border-slate-800 animate-fade-in">
-            <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-900 p-4 text-[10px] font-black uppercase tracking-widest text-slate-500"><div>Descrição do Livro</div><div className="text-right">Realizado (R$)</div></div>
-            <div className="divide-y dark:divide-slate-700">
-                {cats.map(c => (
-                    <div key={c.value} className="flex justify-between p-4 items-center">
-                        <span className="font-bold text-sm text-slate-600 dark:text-slate-400 uppercase">{c.label}</span>
-                        <span className={`font-black ${c.isPositive ? 'text-green-600' : 'text-red-500'}`}>{c.isPositive ? '' : '-'}{safeCurrency(real[c.value] || 0)}</span>
-                    </div>
-                ))}
-                <div className="flex justify-between p-6 items-center bg-indigo-50 dark:bg-indigo-900/20">
-                    <span className="font-black text-indigo-900 dark:text-indigo-200 text-lg uppercase italic tracking-tighter">Saldo Acumulado</span>
-                    <span className={`font-black text-2xl ${real.fluxoCaixa >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>{safeCurrency(real.fluxoCaixa)}</span>
-                </div>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl border border-green-100 dark:border-green-900/30"><h3 className="text-green-800 dark:text-green-400 text-sm font-semibold uppercase mb-2">Entradas</h3><p className="text-3xl font-bold text-green-700 dark:text-green-400">{safeCurrency(receita)}</p></div>
+            <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl border border-red-100 dark:border-red-900/30"><h3 className="text-red-800 dark:text-red-400 text-sm font-semibold uppercase mb-2">Saídas</h3><p className="text-3xl font-bold text-red-700 dark:text-red-400">{safeCurrency(totalSaidas)}</p></div>
+            <div className={`p-6 rounded-xl border ${fluxoCaixa >= 0 ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-900/30' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30'}`}><h3 className={`${fluxoCaixa >= 0 ? 'text-indigo-800 dark:text-indigo-300' : 'text-orange-800 dark:text-orange-300'} text-sm font-semibold uppercase mb-2`}>Saldo Atual</h3><p className={`text-3xl font-black ${fluxoCaixa >= 0 ? 'text-indigo-900 dark:text-indigo-200' : 'text-orange-700 dark:text-orange-300'}`}>{safeCurrency(fluxoCaixa)}</p></div>
         </div>
-    )
+    );
+}
+
+function ChartsView({ allTransactions, companyType }){
+    const lineData = useMemo(() => {
+        if (!allTransactions || allTransactions.length === 0) return [];
+        const groups = {};
+        allTransactions.forEach(t => {
+            if (!t.createdAt || typeof t.createdAt.toDate !== 'function') return;
+            const d = t.createdAt.toDate();
+            const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(t);
+        });
+        return Object.keys(groups).map(key => {
+            const [yearStr, monthStr] = key.split('-');
+            const fins = calculateFinancials(groups[key], companyType);
+            return { name: `${MONTHS[parseInt(monthStr)]}/${yearStr.slice(2)}`, Saldo: fins.fluxoCaixa, year: parseInt(yearStr), month: parseInt(monthStr) };
+        }).sort((a, b) => a.year - b.year || a.month - b.month).slice(-12);
+    }, [allTransactions, companyType]);
+
+    return (
+        <div className="h-80 bg-white dark:bg-slate-800 p-4 rounded-xl border">
+            <ResponsiveContainer width="100%" height="100%"><LineChart data={lineData}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="name" fontSize={10} /><YAxis fontSize={10} /><Tooltip formatter={(value) => safeCurrency(value)} /><Legend /><Line type="monotone" dataKey="Saldo" stroke="#4f46e5" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer>
+        </div>
+    );
 }
