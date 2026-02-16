@@ -11,10 +11,10 @@ import {
 import { 
     Trash2 as LucideTrash2, Building2 as LucideBuilding2, Plus as LucidePlus, Edit2 as LucideEdit2, X as LucideX, Settings as LucideSettings, 
     PieChart as LucidePieChart, Target as LucideTarget, ChevronDown as LucideChevronDown, ChevronRight as LucideChevronRight, Search as LucideSearch, 
-    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, Landmark as LucideLandmark, TrendingUp as LucideTrendingUp, Home as LucideHome
+    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh
 } from 'lucide-react';
 
-// --- SUAS CHAVES REAIS DO FIREBASE ---
+// --- CONFIGURAÇÃO DO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
   authDomain: "app-financeiro-2f.firebaseapp.com",
@@ -39,22 +39,14 @@ const PERIOD_OPTIONS = [
     { value: 'Y', label: 'Ano Completo' },
 ];
 
-const INDICES_MERCADO = [
-    { name: 'CDI (a.a)', value: '11,25%' },
-    { name: 'IPCA (12m)', value: '4,50%' },
-    { name: 'INCC-M', value: '0,30%' },
-    { name: 'Poupança', value: '0,5% + TR' },
-    { name: 'Dólar', value: 'R$ 5,60' }
-];
-
-// --- CATEGORIAS ---
+// --- CONSTANTES DE CATEGORIAS (GLOBAIS) ---
 const TransactionTypeBusiness = { RECEITA: 'Receita', CUSTO: 'Custo', DESPESA_OPERACIONAL: 'Despesa Operacional', JUROS_FINANCEIROS: 'Juros/Financeiro', IMPOSTOS: 'Impostos' };
 const DEFAULT_SUBCATEGORIES_BUSINESS = {
-    [TransactionTypeBusiness.RECEITA]: ['Vendas', 'Serviços', 'Rendimentos'],
-    [TransactionTypeBusiness.CUSTO]: ['CMV', 'Matéria-Prima', 'Fretes'],
-    [TransactionTypeBusiness.DESPESA_OPERACIONAL]: ['Salários', 'Aluguel', 'Marketing', 'Energia', 'Manutenção'],
-    [TransactionTypeBusiness.JUROS_FINANCEIROS]: ['Tarifas', 'Juros', 'Multas'],
-    [TransactionTypeBusiness.IMPOSTOS]: ['Simples', 'ICMS', 'ISS', 'PIS/COFINS']
+    [TransactionTypeBusiness.RECEITA]: ['Vendas de Produtos', 'Prestação de Serviços', 'Rendimentos', 'Outras Receitas'],
+    [TransactionTypeBusiness.CUSTO]: ['Compra de Mercadoria (CMV)', 'Matéria-Prima', 'Embalagens', 'Fretes'],
+    [TransactionTypeBusiness.DESPESA_OPERACIONAL]: ['Salários', 'Aluguel', 'Marketing', 'Energia/Água', 'Manutenção', 'Material Escritório', 'Pro-labore'],
+    [TransactionTypeBusiness.JUROS_FINANCEIROS]: ['Tarifas Bancárias', 'Juros Empréstimos', 'Multas'],
+    [TransactionTypeBusiness.IMPOSTOS]: ['Simples Nacional', 'ICMS', 'ISS', 'PIS', 'COFINS', 'IRPJ', 'CSLL']
 };
 const categoriesBusiness = [
     { value: TransactionTypeBusiness.RECEITA, label: 'Receita (+)', color: 'text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/30', isPositive: true },
@@ -64,17 +56,17 @@ const categoriesBusiness = [
     { value: TransactionTypeBusiness.IMPOSTOS, label: 'Impostos (-)', color: 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30', isPositive: false },
 ];
 
-const TransactionTypePersonal = { RECEITA: 'Renda', MORADIA: 'Moradia', ALIMENTACAO: 'Alimentação', TRANSPORTE: 'Transporte', LAZER: 'Lazer', SAUDE: 'Saúde', EDUCACAO: 'Educação', INVESTIMENTOS: 'Investimentos', DIVIDAS: 'Dívidas' };
+const TransactionTypePersonal = { RECEITA: 'Renda', MORADIA: 'Moradia', ALIMENTACAO: 'Alimentação', TRANSPORTE: 'Transporte', LAZER: 'Lazer/Estilo de Vida', SAUDE: 'Saúde', EDUCACAO: 'Educação', INVESTIMENTOS: 'Investimentos/Poupança', DIVIDAS: 'Dívidas/Empréstimos' };
 const DEFAULT_SUBCATEGORIES_PERSONAL = {
-    [TransactionTypePersonal.RECEITA]: ['Salário', 'Freelance'],
-    [TransactionTypePersonal.MORADIA]: ['Aluguel', 'Luz', 'Net'],
-    [TransactionTypePersonal.ALIMENTACAO]: ['Mercado', 'Delivery'],
-    [TransactionTypePersonal.TRANSPORTE]: ['Combustível', 'Uber'],
-    [TransactionTypePersonal.LAZER]: ['Viagem', 'Streaming'],
-    [TransactionTypePersonal.SAUDE]: ['Plano', 'Farmácia'],
-    [TransactionTypePersonal.EDUCACAO]: ['Curso', 'Livros'],
-    [TransactionTypePersonal.INVESTIMENTOS]: ['Reserva', 'Ações'],
-    [TransactionTypePersonal.DIVIDAS]: ['Cartão', 'Empréstimo']
+    [TransactionTypePersonal.RECEITA]: ['Salário', 'Freelance', 'Dividendos', 'Aluguéis Recebidos'],
+    [TransactionTypePersonal.MORADIA]: ['Aluguel/Condomínio', 'Luz', 'Água', 'Internet', 'Gás', 'Manutenção'],
+    [TransactionTypePersonal.ALIMENTACAO]: ['Supermercado', 'Restaurantes', 'Ifood/Delivery', 'Padaria'],
+    [TransactionTypePersonal.TRANSPORTE]: ['Combustível', 'Uber/99', 'Ônibus/Metrô', 'Manutenção Veículo', 'IPVA/Seguro'],
+    [TransactionTypePersonal.LAZER]: ['Viagens', 'Streaming (Netflix/Spotify)', 'Cinema', 'Bares', 'Hobbies'],
+    [TransactionTypePersonal.SAUDE]: ['Plano de Saúde', 'Farmácia', 'Academia', 'Terapia'],
+    [TransactionTypePersonal.EDUCACAO]: ['Faculdade/Escola', 'Cursos Online', 'Livros'],
+    [TransactionTypePersonal.INVESTIMENTOS]: ['Reserva de Emergência', 'Ações/FIIs', 'CDB/Tesouro'],
+    [TransactionTypePersonal.DIVIDAS]: ['Cartão de Crédito', 'Empréstimo Pessoal', 'Financiamento']
 };
 const categoriesPersonal = [
     { value: TransactionTypePersonal.RECEITA, label: 'Renda (+)', color: 'text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/30', isPositive: true },
@@ -88,10 +80,11 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
+// Fallback de segurança
 const transactionCategories = categoriesBusiness; 
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
 // --- UTILS ---
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 const safeCurrency = (v) => { if (typeof v !== 'number' || isNaN(v)) return 'R$ 0,00'; try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v); } catch (e) { return 'R$ Error'; } };
 const safeDate = (t) => { if (!t || typeof t.toDate !== 'function') return 'Data N/A'; try { return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(t.toDate()); } catch (e) { return 'Inválida'; } };
 const safePercent = (v, t) => (!t || t === 0) ? '0.0%' : `${((v / t) * 100).toFixed(1)}%`;
@@ -99,7 +92,7 @@ const safePercent = (v, t) => (!t || t === 0) ? '0.0%' : `${((v / t) * 100).toFi
 const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const safeData = Array.isArray(data) ? data : [];
     const cats = type === 'personal' ? categoriesPersonal : categoriesBusiness;
-    const sumByType = (t) => safeData.reduce((acc, tr) => tr.type === t ? acc + (Number(tr.amount) || 0) : acc, 0);
+    const sumByType = (tType) => safeData.reduce((acc, t) => t.type === tType ? acc + (Number(t.amount) || 0) : acc, 0);
     const subcatTotals = {};
     safeData.forEach(t => { if (t.subcategory) { const k = `${t.type}:${t.subcategory}`; subcatTotals[k] = (subcatTotals[k] || 0) + (Number(t.amount) || 0); } });
 
@@ -109,10 +102,10 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     cats.forEach(c => { if (!c.isPositive) totalSaidas += sumByType(c.value); });
     const fluxoCaixa = receita - totalSaidas;
 
-    const totalBens = (assets || []).filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
-    const totalInvest = (assets || []).filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
-    const dividasMes = type === 'personal' ? sumByType(TransactionTypePersonal.DIVIDAS) : sumByType(TransactionTypeBusiness.JUROS_FINANCEIROS);
-    const patrimonioLiquido = (totalBens + totalInvest + fluxoCaixa) - dividasMes;
+    const safeAssets = Array.isArray(assets) ? assets : [];
+    const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
+    const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
+    const patrimonioLiquido = (totalBens + totalInvest + fluxoCaixa);
 
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals, totalBens, totalInvest, patrimonioLiquido };
     cats.forEach(c => { financials[c.value] = sumByType(c.value); });
@@ -125,22 +118,55 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     return financials;
 };
 
-// --- COMPONENTS ---
+// --- COMPONENTES AUXILIARES ---
+
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
     const [type, setType] = useState('bens'); 
     const [indexer, setIndexer] = useState('');
+    const [marketData, setMarketData] = useState({ USD: '...', EUR: '...', BTC: '...', CDI: '...', SELIC: '...' });
+
+    useEffect(() => {
+        const fetchMarketData = async () => {
+            try {
+                // HG Brasil API via Proxy para evitar CORS
+                const key = '855e9e8f';
+                const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
+                const dataCoins = await resCoins.json();
+                
+                let hgData = { cdi: 11.25, selic: 11.25 }; 
+                try {
+                    const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
+                    const jsonHg = await resHg.json();
+                    if(jsonHg.results && jsonHg.results[0]) hgData = jsonHg.results[0];
+                } catch(e) { console.log('HG Brasil limitou CORS, usando fallback.'); }
+
+                setMarketData({
+                    USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
+                    EUR: `R$ ${parseFloat(dataCoins.EURBRL.bid).toFixed(2)}`,
+                    BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR', {maximumFractionDigits: 0})}`,
+                    CDI: `${hgData.cdi}%`,
+                    SELIC: `${hgData.selic}%`
+                });
+            } catch (err) {
+                setMarketData({ USD: 'R$ 5,60', EUR: 'R$ 6,00', BTC: '-', CDI: '11.25%', SELIC: '11.25%' });
+            }
+        };
+        fetchMarketData();
+    }, []);
 
     const handleAdd = () => {
-        const val = parseFloat(value.replace(',', '.'));
+        // Parsing robusto de moeda
+        const val = parseFloat(value.replace(/\./g, '').replace(',', '.')); 
         if (!name || isNaN(val)) return;
         onAddAsset({ name, value: val, type, indexer, createdAt: Timestamp.now() });
         setName(''); setValue(''); setIndexer('');
     };
 
-    const totalBens = assets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
-    const totalInvest = assets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
+    const safeAssets = Array.isArray(assets) ? assets : [];
+    const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
+    const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
 
     return (
         <div className="space-y-6">
@@ -154,11 +180,23 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                     <p className="text-3xl font-bold text-green-600 dark:text-green-400">{safeCurrency(totalInvest)}</p>
                 </div>
             </div>
+            
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Indicadores (HG Brasil + Awesome)</h3>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.USD}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.EUR}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.BTC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
+                </div>
+            </div>
+
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                 <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-4">Cadastrar Novo Item</h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
-                    <input placeholder="Nome (ex: Apto Centro)" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
+                    <input placeholder="Nome (ex: Apto)" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
                     <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
                     <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
                 </div>
@@ -167,22 +205,20 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                  <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400"><tr><th className="p-4">Item</th><th className="p-4">Tipo</th><th className="p-4">Índice</th><th className="p-4 text-right">Valor Atual</th><th className="p-4 w-10"></th></tr></thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">{assets.map(a => (<tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30"><td className="p-4 font-medium text-slate-800 dark:text-slate-200">{a.name}</td><td className="p-4 text-slate-500 dark:text-slate-400 capitalize">{a.type}</td><td className="p-4 text-slate-500 dark:text-slate-400">{a.indexer || '-'}</td><td className="p-4 text-right font-bold text-slate-700 dark:text-slate-200">{safeCurrency(a.value)}</td><td className="p-4"><button onClick={() => onDeleteAsset(a.id)} className="text-red-400 hover:text-red-600"><LucideTrash2 size={16}/></button></td></tr>))}</tbody>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">{safeAssets.map(a => (<tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30"><td className="p-4 font-medium text-slate-800 dark:text-slate-200">{a.name}</td><td className="p-4 text-slate-500 dark:text-slate-400 capitalize">{a.type}</td><td className="p-4 text-slate-500 dark:text-slate-400">{a.indexer || '-'}</td><td className="p-4 text-right font-bold text-slate-700 dark:text-slate-200">{safeCurrency(a.value)}</td><td className="p-4"><button onClick={() => onDeleteAsset(a.id)} className="text-red-400 hover:text-red-600"><LucideTrash2 size={16}/></button></td></tr>))}</tbody>
                  </table>
+                 {safeAssets.length === 0 && <div className="p-8 text-center text-slate-400">Nenhum item cadastrado.</div>}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{INDICES_MERCADO.map((idx, i) => (<div key={i} className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-center border border-slate-200 dark:border-slate-700"><p className="text-xs text-slate-500 uppercase font-bold">{idx.name}</p><p className="text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400">{idx.value}</p></div>))}</div>
-            <p className="text-center text-xs text-slate-400">* Índices de referência. Não atualizam automaticamente.</p>
         </div>
     );
 };
 
-const ChatBot = ({ isOpen, onClose, onAddTransaction, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
-    const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou seu assistente.", sender: 'bot' }, { id: 2, text: "Ex: 'Entrada de 2.220' ou 'Gastei 50'. Shift+Enter pula linha.", sender: 'bot' }]);
+const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
+    const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou seu assistente financeiro.", sender: 'bot' }]);
     const [inputText, setInputText] = useState('');
     const [lastActionId, setLastActionId] = useState(null);
     const messagesEndRef = useRef(null);
     const companyType = currentCompany?.type || 'business';
-
     const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
     useEffect(() => { if (isOpen) scrollToBottom(); }, [messages, isOpen]);
 
@@ -197,24 +233,42 @@ const ChatBot = ({ isOpen, onClose, onAddTransaction, onUpdateTransaction, onDel
         const text = inputText; const lowerText = text.toLowerCase();
         setMessages(prev => [...prev, { id: Date.now(), text, sender: 'user' }]);
         setInputText('');
+        
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
-            if ((lowerText.includes('corrigir') || lowerText.includes('corrija')) && lastActionId) {
+            
+            // NLP Simples: Detecção de Patrimônio
+            if (lowerText.includes('comprei') || lowerText.includes('investi') || lowerText.includes('adquiri') || lowerText.includes('novo bem') || lowerText.includes('patrimonio') || lowerText.includes('imóvel') || lowerText.includes('carro')) {
+                 const amount = parseValue(text);
+                 const name = text.replace(/[0-9.,]+/, '').replace(/(comprei|investi|adquiri|um|uma|no|na|em|R\$|reais|novo|bem|patrimonio)/gi, '').trim();
+                 if (!isNaN(amount) && amount > 0) {
+                     const type = (lowerText.includes('invest') || lowerText.includes('ação') || lowerText.includes('cdb') || lowerText.includes('tesouro')) ? 'investimento' : 'bens';
+                     try {
+                         await onAddAsset({ name: name || 'Novo Item', value: amount, type, indexer: '', createdAt: Timestamp.now() });
+                         botResponse.text = `🏛️ Patrimônio Adicionado: ${name || 'Item'} de ${safeCurrency(amount)}.`;
+                     } catch(e) { botResponse.text = "Erro ao salvar patrimônio."; }
+                 } else { botResponse.text = "Qual o valor do bem/investimento?"; }
+            }
+            else if ((lowerText.includes('corrigir') || lowerText.includes('corrija')) && lastActionId) {
                 const newValue = parseValue(text);
                 if (!isNaN(newValue) && newValue > 0) {
                     try { await onUpdateTransaction(lastActionId, { amount: newValue }); botResponse.text = `✅ Corrigido! Valor: ${safeCurrency(newValue)}.`; } catch (e) { botResponse.text = "❌ Erro ao corrigir."; }
                 } else { botResponse.text = "Diga o valor correto. Ex: '1500'"; }
-            } else if (lowerText.includes('apagar') && lowerText.includes('ultimo')) {
+            } 
+            else if ((lowerText.includes('apagar') || lowerText.includes('cancelar')) && lowerText.includes('ultimo')) {
                 if (lastActionId) { try { await onDeleteTransaction(lastActionId); setLastActionId(null); botResponse.text = "🗑️ Último lançamento apagado."; } catch (e) { botResponse.text = "❌ Erro ao apagar."; } } else { botResponse.text = "Nada recente para apagar."; }
-            } else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
+            } 
+            else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
                 const fins = calculateFinancials(transactions, companyType);
                 botResponse.text = `📊 *Resumo*\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo: ${safeCurrency(fins.fluxoCaixa)}`;
-            } else {
+            } 
+            else {
                 const amount = parseValue(text);
                 if (!isNaN(amount) && amount > 0) {
                     let type = ''; let typeLabel = '';
                     if (['recebi', 'ganhei', 'venda', 'entrada'].some(w => lowerText.includes(w))) { type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA; typeLabel = 'Receita'; }
-                    else if (['gastei', 'paguei', 'saída', 'compra'].some(w => lowerText.includes(w))) { typeLabel = 'Despesa'; type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; }
+                    else if (['gastei', 'paguei', 'saída', 'compra', 'boleto'].some(w => lowerText.includes(w))) { typeLabel = 'Despesa'; type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; }
+                    
                     if (type) {
                         const desc = text.replace(/[0-9.,]+/, '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$|reais)/gi, '').trim();
                         try { const newId = await onAddTransaction({ desc: desc || 'Via Chat', amount, type, subcategory: '', date: new Date() }); setLastActionId(newId); botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`; } catch (e) { botResponse.text = "Erro ao salvar."; }
@@ -225,33 +279,28 @@ const ChatBot = ({ isOpen, onClose, onAddTransaction, onUpdateTransaction, onDel
         }, 500);
     };
 
-    const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }
-    if (!isOpen) return null;
     return (
         <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 animate-fade-in-up h-[450px]">
             <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold">Assistente IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 dark:bg-slate-950/50">{messages.map(msg => (<div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-wrap ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-none shadow-sm border border-slate-100 dark:border-slate-700'}`}>{msg.text}</div></div>))}<div ref={messagesEndRef} /></div>
-            <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-2"><textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none" placeholder="Digite... (Shift+Enter pula linha)" rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={handleKeyDown} /><button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end"><LucideSend size={18} /></button></div>
+            <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-2"><textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none" placeholder="Digite... (Enter = linha)" rows={1} value={inputText} onChange={e => setInputText(e.target.value)} /><button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end"><LucideSend size={18} /></button></div>
         </div>
     );
 };
 
-// ... (Outros componentes DREView, etc. mantidos e ajustados para assets) ...
-// DREView foi simplificado acima, vamos garantir que ele e outros existam.
-// Vou re-inserir os componentes essenciais compactados para garantir que funcione
-
-const CalculatorModal = ({ onClose, onConfirm }) => {
-    const [expression, setExpression] = useState('');
-    const handleBtnClick = (val) => { if (val === 'C') { setExpression(''); } else if (val === '=') { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); const result = eval(sanitized); setExpression(String(result)); } catch (e) { setExpression('Erro'); setTimeout(() => setExpression(''), 1000); } } else { setExpression(prev => prev + val); } };
-    const handleConfirm = () => { let finalVal = expression; if (/[+\-x÷]/.test(expression)) { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); finalVal = String(eval(sanitized)); } catch (e) { return; } } onConfirm(finalVal.replace('.', ',')); };
-    const btns = ['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];
-    return ( <div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4" style={{zIndex:9999}}><div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6"><div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-800 dark:text-white">Calculadora</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl mb-4 text-right text-2xl font-bold dark:text-white">{expression || '0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{btns.map(b => (<button key={b} onClick={() => handleBtnClick(b)} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-700 font-bold dark:text-white">{b}</button>))} <button onClick={() => handleBtnClick('=')} className="col-span-4 bg-slate-200 p-3 rounded-xl">=</button></div><button onClick={handleConfirm} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold">USAR</button></div></div> );
-};
-
-const RepeatModal = ({ onClose, onConfirm, transaction }) => { const [c, setC] = useState(1); return (<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full"><h3 className="font-bold mb-4 dark:text-white">Repetir Lançamento</h3><p className="mb-4 text-sm dark:text-gray-300">Quantas vezes repetir {transaction.desc}?</p><input type="number" value={c} onChange={e=>setC(e.target.value)} className="w-full p-2 border rounded mb-4 dark:bg-slate-900 dark:text-white"/><button onClick={()=>onConfirm(c)} className="w-full bg-indigo-600 text-white p-2 rounded">Confirmar</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Cancelar</button></div></div>); };
-const Sidebar = ({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onOpenSettings, onRenameCompany }) => {
-    const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false);
-    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-700 flex justify-between"><h2 className="font-bold text-xl dark:text-white">Minhas Contas</h2><button onClick={onClose}><LucideX/></button></div> <div className="p-4"> {companies.map(c => (<button key={c.id} onClick={() => { onChangeCompany(c); onClose(); }} className={`w-full text-left p-3 rounded-xl mb-2 ${currentCompany?.id === c.id ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 dark:text-white dark:hover:bg-slate-800'}`}>{c.name}</button>))} <button onClick={() => setIsCreating(true)} className="w-full p-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600"><LucidePlus/> Nova Conta</button> {isCreating && (<div className="mt-4"><input autoFocus placeholder="Nome" className="w-full p-2 border rounded mb-2 dark:bg-slate-800 dark:text-white" value={newName} onChange={e => setNewName(e.target.value)} /><button onClick={() => { if(newName) { onAddCompany(newName, 'business'); setIsCreating(false); } }} className="w-full bg-indigo-600 text-white p-2 rounded">Criar</button></div>)} <div className="mt-8 pt-4 border-t dark:border-slate-700"><button onClick={onOpenSettings} className="w-full p-3 flex items-center gap-3 text-slate-600 dark:text-slate-400"><LucideSettings/> Categorias</button></div> </div> </div> </>);
+// ... COMPONENTES AUXILIARES ...
+const CalculatorModal=({onClose,onConfirm})=>{const [e,setE]=useState('');const h=(v)=>{if(v==='C')setE('');else if(v==='='){try{setE(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))))}catch{setE('Erro')}}else setE(p=>p+v)};const c=()=>{try{onConfirm(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))).replace('.',','))}catch{}};const b=['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm"><div className="flex justify-between mb-4"><h3 className="font-bold dark:text-white">Calculadora</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-4 rounded mb-4 text-right font-bold dark:text-white text-2xl">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{b.map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded font-bold dark:text-white">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-slate-200 p-3 rounded">=</button></div><button onClick={c} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">USAR</button></div></div>)};
+const RepeatModal=({onClose,onConfirm,transaction})=>{const [c,setC]=useState(1);return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full"><h3 className="font-bold mb-4 dark:text-white">Repetir</h3><input type="number" value={c} onChange={e=>setC(e.target.value)} className="w-full p-2 border rounded mb-4 dark:bg-slate-900 dark:text-white"/><button onClick={()=>onConfirm(c)} className="w-full bg-indigo-600 text-white p-2 rounded">Confirmar</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Cancelar</button></div></div>)};
+const ExportModal=({onClose,csvContent,fileName})=>{const [c,setC]=useState(false);const r=useRef(null);const h=()=>{if(r.current){r.current.select();document.execCommand('copy');setC(true)}};return(<div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"><div className="bg-white p-6 rounded-xl max-w-lg w-full"><h3 className="font-bold text-lg mb-2">Exportar CSV</h3><textarea ref={r} readOnly value={csvContent} className="w-full h-32 p-2 border rounded mb-4 text-xs font-mono"/><button onClick={h} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">{c?'Copiado!':'Copiar'}</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Fechar</button></div></div>)};
+const PrintLayout=({companyName,periodStr,onClose,children})=>{return(<div className="fixed inset-0 bg-white z-[70] overflow-y-auto text-black"><div className="sticky top-0 bg-slate-800 text-white p-4 flex justify-between print:hidden"><div><h2 className="font-bold">Modo Impressão</h2></div><div className="flex gap-2"><button onClick={()=>window.print()} className="bg-indigo-600 px-4 py-1 rounded">Imprimir</button><button onClick={onClose} className="bg-slate-600 px-4 py-1 rounded">Fechar</button></div></div><div className="max-w-[210mm] mx-auto p-[10mm]"><div className="text-center border-b-2 border-black pb-4 mb-6"><h1 className="text-2xl font-bold uppercase">{companyName}</h1><h2>Relatório Financeiro</h2><p>{periodStr}</p></div>{children}</div></div>)};
+const InstallGuideModal=({onClose})=>{return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl p-6 max-w-sm text-center"><h2 className="font-bold text-xl mb-2">Instalar</h2><p className="mb-4">Abra no Chrome/Safari e use "Adicionar à Tela Inicial".</p><button onClick={onClose} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">Ok</button></div></div>)};
+const TutorialModal=({onClose})=>{return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl p-6 max-w-md text-center"><h2 className="font-bold text-xl mb-2">Bem-vindo!</h2><p className="mb-6">Seu gestor financeiro completo.</p><button onClick={onClose} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">Começar</button></div></div>)};
+const Sidebar = ({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onOpenSettings, onOpenInstall, onRenameCompany }) => {
+    const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false); const [editingId, setEditingId] = useState(null); const [editName, setEditName] = useState(''); const [newType, setNewType] = useState('business');
+    const handleCreate = () => { if(newName.trim()) { onAddCompany(newName, newType); setNewName(''); setIsCreating(false); onClose(); } };
+    const handleStartEdit = (e,c) => { e.stopPropagation(); setEditingId(c.id); setEditName(c.name); };
+    const handleSaveEdit = (e) => { e.stopPropagation(); if(editName.trim()){ onRenameCompany(editingId, editName); setEditingId(null); } };
+    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-700 flex justify-between"><h2 className="font-bold text-xl dark:text-white">Minhas Contas</h2><button onClick={onClose}><LucideX/></button></div> <div className="p-4"> {companies.map(c => (<div key={c.id} onClick={() => { if(editingId!==c.id){onChangeCompany(c); onClose();} }} className={`w-full text-left p-3 rounded-xl mb-2 flex items-center gap-2 cursor-pointer ${currentCompany?.id === c.id ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 dark:text-white dark:hover:bg-slate-800'}`}>{editingId === c.id ? (<><input autoFocus className="flex-1 p-1 border rounded" value={editName} onChange={e=>setEditName(e.target.value)} onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Enter')handleSaveEdit(e)}} /><button onClick={handleSaveEdit}><LucideCheck size={14}/></button></>) : (<><span className="flex-1">{c.name}</span><button onClick={e=>{e.stopPropagation(); setEditingId(c.id); setEditName(c.name)}} className="text-slate-400 hover:text-indigo-500"><LucideEdit2 size={14}/></button></>)}</div>))} <button onClick={() => setIsCreating(true)} className="w-full p-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600"><LucidePlus/> Nova Conta</button> {isCreating && (<div className="mt-4 bg-slate-50 p-3 rounded"><input autoFocus placeholder="Nome" className="w-full p-2 border rounded mb-2 dark:bg-slate-800 dark:text-white" value={newName} onChange={e => setNewName(e.target.value)} /><div className="flex gap-2 mb-2"><button onClick={()=>setNewType('business')} className={`flex-1 text-xs p-1 rounded border ${newType==='business'?'bg-blue-100 border-blue-500':'bg-white'}`}>Empresa</button><button onClick={()=>setNewType('personal')} className={`flex-1 text-xs p-1 rounded border ${newType==='personal'?'bg-green-100 border-green-500':'bg-white'}`}>Pessoal</button></div><button onClick={handleCreate} className="w-full bg-indigo-600 text-white p-2 rounded">Criar</button></div>)} <div className="mt-8 pt-4 border-t dark:border-slate-700"><button onClick={onOpenSettings} className="w-full p-3 flex items-center gap-3 text-slate-600 dark:text-slate-400"><LucideSettings/> Categorias</button></div> </div> </div> </>);
 };
 
 export default function App() {
@@ -259,8 +308,11 @@ export default function App() {
     const [transactions, setTransactions] = useState([]); const [subcategories, setSubcategories] = useState({}); const [budget, setBudget] = useState({}); const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true); const [mainTab, setMainTab] = useState('lancamentos'); const [resultTab, setResultTab] = useState('dre');
     const [period, setPeriod] = useState(new Date().getMonth()); const [year, setYear] = useState(new Date().getFullYear());
-    const [showSettings, setShowSettings] = useState(false); const [searchTerm, setSearchTerm] = useState(''); const [showSidebar, setShowSidebar] = useState(false);
-    const [darkMode, setDarkMode] = useState(false); const [showCalculator, setShowCalculator] = useState(false); const [showChat, setShowChat] = useState(false);
+    const [showSettings, setShowSettings] = useState(false); const [searchTerm, setSearchTerm] = useState(''); const [showTutorial, setShowTutorial] = useState(false); const [showSidebar, setShowSidebar] = useState(false);
+    const [darkMode, setDarkMode] = useState(false); const [showExportModal, setShowExportModal] = useState(false); const [csvContentToExport, setCsvContentToExport] = useState('');
+    const [exportFileName, setExportFileName] = useState(''); const [showInstallGuide, setShowInstallGuide] = useState(false); const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [showPrintPreview, setShowPrintPreview] = useState(false); const [showCalculator, setShowCalculator] = useState(false); const [showChat, setShowChat] = useState(false);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     
     // States for forms
     const [editingTransaction, setEditingTransaction] = useState(null); const [repeatingTransaction, setRepeatingTransaction] = useState(null);
@@ -321,38 +373,12 @@ export default function App() {
         getDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/budgets/${year}_${period}`)).then(snap => setBudget(snap.exists() ? snap.data() : {})).catch(err => console.error(err));
     }, [user, db, period, year, currentCompany]);
 
-    // Helper Logic
-    const filteredData = useMemo(() => {
-        return transactions.filter(t => {
-            if (!t.createdAt) return false;
-            const d = t.createdAt.toDate();
-            if (d.getUTCFullYear() !== year) return false;
-            if (typeof period === 'number') return d.getUTCMonth() === period;
-            const m = d.getUTCMonth();
-            if (period === 'Q1') return m < 3; if (period === 'Q2') return m >= 3 && m < 6;
-            if (period === 'Q3') return m >= 6 && m < 9; if (period === 'Q4') return m >= 9;
-            if (period === 'S1') return m < 6; if (period === 'S2') return m >= 6;
-            return true;
-        });
-    }, [transactions, period, year]);
-
-    const searchedData = useMemo(() => {
-        if (!searchTerm.trim()) return filteredData;
-        return filteredData.filter(t => t.desc.toLowerCase().includes(searchTerm.toLowerCase()));
-    }, [filteredData, searchTerm]);
-
+    // Helpers
+    const filteredData = useMemo(() => transactions.filter(t => { if(!t.createdAt)return false; const d=t.createdAt.toDate(); if(d.getUTCFullYear()!==year)return false; if(typeof period==='number')return d.getUTCMonth()===period; const m=d.getUTCMonth(); if(period==='Q1')return m<3; if(period==='Q2')return m>=3&&m<6; if(period==='Q3')return m>=6&&m<9; if(period==='Q4')return m>=9; if(period==='S1')return m<6; if(period==='S2')return m>=6; return true; }), [transactions, period, year]);
+    const searchedData = useMemo(() => { if(!searchTerm.trim())return filteredData; return filteredData.filter(t=>t.desc.toLowerCase().includes(searchTerm.toLowerCase())); }, [filteredData, searchTerm]);
     const handleCompanyChange = (c) => { setCurrentCompany(c); localStorage.setItem('lastCompanyId', c.id); };
     const resetForm = () => { setEditingTransaction(null); setFormDesc(''); setFormAmount(''); setIsRecurring(false); };
-    const handleSaveTransaction = async (e) => { e.preventDefault(); if (!currentCompany) return; 
-        const val = parseFloat(formAmount.replace(',', '.')); if (isNaN(val)) return;
-        const parts = formDate.split('-'); const date = new Date(Date.UTC(parts[0], parts[1]-1, parts[2], 12));
-        const data = { desc: formDesc, amount: val, type: formType, subcategory: formSubcat, createdAt: Timestamp.fromDate(date) };
-        const ref = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
-        if (editingTransaction) await updateDoc(doc(ref, editingTransaction.id), data);
-        else if (isRecurring && recurringMonths > 1) { const b = writeBatch(db); for(let i=0; i<recurringMonths; i++) { const d = new Date(date); d.setUTCMonth(date.getUTCMonth() + i); b.set(doc(ref), {...data, createdAt: Timestamp.fromDate(d)}); } await b.commit(); }
-        else await addDoc(ref, data);
-        resetForm();
-    };
+    const handleSaveTransaction = async (e) => { e.preventDefault(); if (!currentCompany) return; const val = parseFloat(formAmount.replace(',', '.')); if (isNaN(val)) return; const parts = formDate.split('-'); const date = new Date(Date.UTC(parts[0], parts[1]-1, parts[2], 12)); const data = { desc: formDesc, amount: val, type: formType, subcategory: formSubcat, createdAt: Timestamp.fromDate(date) }; const ref = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`); if (editingTransaction) await updateDoc(doc(ref, editingTransaction.id), data); else if (isRecurring && recurringMonths > 1) { const b = writeBatch(db); for(let i=0; i<recurringMonths; i++) { const d = new Date(date); d.setUTCMonth(date.getUTCMonth() + i); b.set(doc(ref), {...data, createdAt: Timestamp.fromDate(d)}); } await b.commit(); } else await addDoc(ref, data); resetForm(); };
     const handleAddAsset = async (data) => { await addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), data); };
     const handleDeleteAsset = async (id) => { if (window.confirm("Excluir?")) await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`, id)); };
     const handleAddSub = async (type) => { if (newSubcatName) { await addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/subcategories`), { type, name: newSubcatName }); setNewSubcatName(''); } };
@@ -362,24 +388,35 @@ export default function App() {
     const handleAddCompany = async (name, type) => { const ref = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies`)); await setDoc(ref, { name, type, createdAt: Timestamp.now() }); setCurrentCompany({id: ref.id, name, type}); };
     const handleRenameCompany = async (id, name) => { await updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies`, id), { name }); };
     
-    // Chat & Helpers
+    // Chat Helpers
     const handleAddTxChat = async (d) => { const ref = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`); const r = await addDoc(ref, { ...d, createdAt: Timestamp.fromDate(d.date) }); return r.id; };
     const handleUpTxChat = async (id, d) => { await updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id), d); };
     const handleDelTxChat = async (id) => { await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id)); };
-    const handleConfirmRepeat = async (n) => { /* logic similar to saveTransaction but for repeating */ setRepeatingTransaction(null); };
+    const handleConfirmRepeat = async (n) => { /* logic for repeat */ setRepeatingTransaction(null); };
+    const handleExportCSV = () => { if (!filteredData.length) { alert("Sem dados."); return; } const h = ["Data", "Tipo", "Sub", "Desc", "Valor"]; const r = filteredData.map(t => [safeDate(t.createdAt), t.type, t.subcategory||'', t.desc.replace(/"/g,'""'), (typeof t.amount==='number'?t.amount:0).toFixed(2).replace('.',',')]); const c = [h.join(";"), ...r.map(ro => ro.map(cell => `"${cell}"`).join(";"))].join("\n"); setCsvContentToExport(c); setExportFileName(`fin_${year}.csv`); setShowExportModal(true); };
+    const handlePrint = () => { setShowPrintPreview(true); };
+    const handleCalculatorFinish = (val) => { setFormAmount(val); setShowCalculator(false); };
+    const requestNotificationPermission = () => { Notification.requestPermission().then(p => { if (p === 'granted') { setNotificationsEnabled(true); alert("Notificações ativadas!"); } }); };
 
-    if (loading) return <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-indigo-600">Carregando...</div>;
+    if (loading && !user) return <div className="flex h-screen items-center justify-center text-indigo-600 dark:text-indigo-400 animate-pulse bg-white dark:bg-slate-950">Iniciando...</div>;
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-300 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
             <script src="https://cdn.tailwindcss.com"></script>
             <script dangerouslySetInnerHTML={{__html: `tailwind.config = { darkMode: 'class' }`}} />
             
-            {showSidebar && <Sidebar isOpen={showSidebar} onClose={() => setShowSidebar(false)} companies={companies} currentCompany={currentCompany} onChangeCompany={handleCompanyChange} onAddCompany={handleAddCompany} onRenameCompany={handleRenameCompany} onOpenSettings={() => setShowSettings(true)} onOpenInstall={() => setShowInstallGuide(true)} />}
-            {showSettings && <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 p-6 rounded-xl w-full max-w-lg h-[80vh] overflow-y-auto"><div className="flex justify-between mb-4"><h2 className="font-bold text-xl">Categorias</h2><button onClick={()=>setShowSettings(false)}><LucideX/></button></div>{activeCategories.map(cat => (<div key={cat.value} className="mb-6"><h3 className={`font-bold text-sm ${cat.color.split(' ')[0]}`}>{cat.label}</h3><div className="flex gap-2 my-2"><input className="border p-2 rounded flex-1 dark:bg-slate-900" placeholder="Nova" value={newSubcatName} onChange={e=>setNewSubcatName(e.target.value)} /><button onClick={()=>{handleAddSub(cat.value)}} className="bg-indigo-600 text-white p-2 rounded"><LucidePlus/></button></div><div className="flex flex-wrap gap-2">{subcategories[cat.value]?.map(s=><div key={s.id} className="bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full text-sm flex gap-2">{s.name} <button onClick={()=>handleDeleteSub(s.id)} className="text-red-500"><LucideX size={14}/></button></div>)}</div></div>))}</div></div>}
-            {showCalculator && <CalculatorModal onClose={() => setShowCalculator(false)} onConfirm={(v) => { setFormAmount(v); setShowCalculator(false); }} />}
-            {showChat && <div className="fixed inset-0 bg-black/50 z-[60] flex items-end justify-end p-4 pointer-events-none"><div className="pointer-events-auto w-full max-w-sm"><ChatInterface isOpen={true} onClose={()=>setShowChat(false)} onAddTransaction={handleAddTxChat} onUpdateTransaction={handleUpTxChat} onDeleteTransaction={handleDelTxChat} currentCompany={currentCompany} transactions={transactions} /></div></div>}
+            {showTutorial && <TutorialModal onClose={closeTutorial} />}
+            {showExportModal && <ExportModal onClose={() => setShowExportModal(false)} csvContent={csvContentToExport} fileName={exportFileName} />}
+            {showInstallGuide && <InstallGuideModal onClose={() => setShowInstallGuide(false)} />}
             {repeatingTransaction && <RepeatModal onClose={()=>setRepeatingTransaction(null)} onConfirm={handleConfirmRepeat} transaction={repeatingTransaction} />}
+            {showCalculator && <CalculatorModal onClose={() => setShowCalculator(false)} onConfirm={(v) => { setFormAmount(v); setShowCalculator(false); }} />}
+            {showChat && <div className="fixed inset-0 bg-black/50 z-[60] flex items-end justify-end p-4 pointer-events-none"><div className="pointer-events-auto w-full max-w-sm"><ChatInterface isOpen={true} onClose={()=>setShowChat(false)} onAddTransaction={handleAddTxChat} onAddAsset={handleAddAsset} onUpdateTransaction={handleUpTxChat} onDeleteTransaction={handleDelTxChat} currentCompany={currentCompany} transactions={transactions} /></div></div>}
+
+            <Sidebar isOpen={showSidebar} onClose={() => setShowSidebar(false)} companies={companies} currentCompany={currentCompany} onChangeCompany={handleCompanyChange} onAddCompany={handleAddCompany} onRenameCompany={handleRenameCompany} onOpenSettings={() => setShowSettings(true)} onOpenInstall={() => setShowInstallGuide(true)} />
+            
+            {showSettings && <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 p-6 rounded-xl w-full max-w-lg h-[80vh] overflow-y-auto"><div className="flex justify-between mb-4"><h2 className="font-bold text-xl">Categorias</h2><button onClick={()=>setShowSettings(false)}><LucideX/></button></div><div className="mb-8 p-4 bg-indigo-50 dark:bg-indigo-900 rounded flex justify-between"><div><h4>Notificações</h4><p className="text-xs">Lembretes diários.</p></div><button onClick={requestNotificationPermission}><LucideBell/></button></div>{activeCategories.map(cat => (<div key={cat.value} className="mb-6"><h3 className={`font-bold text-sm ${cat.color.split(' ')[0]}`}>{cat.label}</h3><div className="flex gap-2 my-2"><input className="border p-2 rounded flex-1 dark:bg-slate-900" placeholder="Nova" value={newSubcatName} onChange={e=>setNewSubcatName(e.target.value)} /><button onClick={()=>{handleAddSub(cat.value)}} className="bg-indigo-600 text-white p-2 rounded"><LucidePlus/></button></div><div className="flex flex-wrap gap-2">{subcategories[cat.value]?.map(s=><div key={s.id} className="bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full text-sm flex gap-2">{s.name} <button onClick={()=>handleDeleteSub(s.id)} className="text-red-500"><LucideX size={14}/></button></div>)}</div></div>))}</div></div>}
+
+            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={companyType} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={companyType} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{transactionCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
 
             <header className="max-w-5xl mx-auto p-4 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
@@ -391,6 +428,9 @@ export default function App() {
                     <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun/> : <LucideMoon/>}</button>
                     <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={period} onChange={e => setPeriod(parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
                     <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
+                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                    <button onClick={handleExportCSV} className="p-2 text-indigo-600"><LucideDownload/></button>
+                    <button onClick={handlePrint} className="p-2 text-slate-600"><LucidePrinter/></button>
                 </div>
             </header>
 
