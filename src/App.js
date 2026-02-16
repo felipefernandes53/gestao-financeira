@@ -900,7 +900,7 @@ export default function App() {
                 </div>
             )}
 
-            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-4 rounded-3xl shadow-2xl z-[80] font-bold text-xs md:text-sm animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer w-max max-w-[90%]" onClick={()=>setShowUpdateMessage(false)}><LucideRocket className="shrink-0"/> <span>NOVIDADE: VISUAL OTIMIZADO PARA CELULAR!</span> <LucideX size={16} className="shrink-0"/></div>}
+            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-4 rounded-3xl shadow-2xl z-[80] font-bold text-xs md:text-sm animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer w-max max-w-[90%]" onClick={()=>setShowUpdateMessage(false)}><LucideRocket className="shrink-0"/> <span>NOVIDADE: ASSISTENTE IA!</span> <LucideX size={16} className="shrink-0"/></div>}
             
             {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v49', 'true')}} />}
             {showCalculator && <CalculatorModal onClose={()=>setShowCalculator(false)} onConfirm={v=>{setFormAmount(v); setShowCalculator(false)}} />}
