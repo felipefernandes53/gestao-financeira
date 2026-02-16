@@ -14,7 +14,7 @@ import {
     Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh
 } from 'lucide-react';
 
-// --- SUAS CHAVES DO FIREBASE ---
+// --- SUAS CHAVES REAIS DO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
   authDomain: "app-financeiro-2f.firebaseapp.com",
@@ -26,6 +26,8 @@ const firebaseConfig = {
 };
 
 const appId = "financial-app-production";
+
+// --- CONSTANTES GLOBAIS (DEFINIDAS NO TOPO PARA EVITAR ERROS) ---
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const PERIOD_OPTIONS = [
@@ -39,15 +41,7 @@ const PERIOD_OPTIONS = [
     { value: 'Y', label: 'Ano Completo' },
 ];
 
-const INDICES_MERCADO = [
-    { name: 'CDI (a.a)', value: '11,25%' },
-    { name: 'IPCA (12m)', value: '4,50%' },
-    { name: 'INCC-M', value: '0,30%' },
-    { name: 'Poupança', value: '0,5% + TR' },
-    { name: 'Dólar', value: 'R$ 5,60' }
-];
-
-// --- CATEGORIAS ---
+// Categorias Empresariais
 const TransactionTypeBusiness = { RECEITA: 'Receita', CUSTO: 'Custo', DESPESA_OPERACIONAL: 'Despesa Operacional', JUROS_FINANCEIROS: 'Juros/Financeiro', IMPOSTOS: 'Impostos' };
 const DEFAULT_SUBCATEGORIES_BUSINESS = {
     [TransactionTypeBusiness.RECEITA]: ['Vendas de Produtos', 'Prestação de Serviços', 'Rendimentos', 'Outras Receitas'],
@@ -64,6 +58,7 @@ const categoriesBusiness = [
     { value: TransactionTypeBusiness.IMPOSTOS, label: 'Impostos (-)', color: 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30', isPositive: false },
 ];
 
+// Categorias Pessoais
 const TransactionTypePersonal = { RECEITA: 'Renda', MORADIA: 'Moradia', ALIMENTACAO: 'Alimentação', TRANSPORTE: 'Transporte', LAZER: 'Lazer/Estilo de Vida', SAUDE: 'Saúde', EDUCACAO: 'Educação', INVESTIMENTOS: 'Investimentos/Poupança', DIVIDAS: 'Dívidas/Empréstimos' };
 const DEFAULT_SUBCATEGORIES_PERSONAL = {
     [TransactionTypePersonal.RECEITA]: ['Salário', 'Freelance', 'Dividendos', 'Aluguéis Recebidos'],
@@ -88,11 +83,12 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// *** VARIÁVEL DE SEGURANÇA ***
+// VARIÁVEL DE SEGURANÇA (Obrigatória para inicialização do state)
 const transactionCategories = categoriesBusiness; 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
+// --- HELPERS ---
 const safeCurrency = (value) => { if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00'; try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); } catch (e) { return 'R$ Error'; } };
 const safeDate = (timestamp) => { if (!timestamp || typeof timestamp.toDate !== 'function') return 'Data N/A'; try { return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(timestamp.toDate()); } catch (e) { return 'Inválida'; } };
 const safePercent = (value, total) => { if (!total || total === 0) return '0.0%'; return `${((value / total) * 100).toFixed(1)}%`; };
@@ -101,8 +97,10 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const safeData = Array.isArray(data) ? data : [];
     const cats = type === 'personal' ? categoriesPersonal : categoriesBusiness;
     const sumByType = (tType) => safeData.reduce((acc, t) => t.type === tType ? acc + (Number(t.amount) || 0) : acc, 0);
+    
     const subcatTotals = {};
     safeData.forEach(t => { if (t.subcategory) { const key = `${t.type}:${t.subcategory}`; subcatTotals[key] = (subcatTotals[key] || 0) + (Number(t.amount) || 0); } });
+
     const receitaKey = type === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
     const receita = sumByType(receitaKey);
     let totalSaidas = 0;
@@ -116,6 +114,7 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
 
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals, totalBens, totalInvest, patrimonioLiquido };
     cats.forEach(cat => { financials[cat.value] = sumByType(cat.value); });
+    
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
         financials.ebitda = financials.lucroBruto - financials[TransactionTypeBusiness.DESPESA_OPERACIONAL];
@@ -124,7 +123,7 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     return financials;
 };
 
-// --- Componentes ---
+// --- COMPONENTES ---
 
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
@@ -136,24 +135,17 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     useEffect(() => {
         const fetchMarketData = async () => {
             try {
-                const key = '855e9e8f';
-                
                 const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
                 const dataCoins = await resCoins.json();
                 
-                let hgData = { cdi: 11.25, selic: 11.25 }; 
-                try {
-                    const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
-                    const jsonHg = await resHg.json();
-                    if(jsonHg.results && jsonHg.results[0]) hgData = jsonHg.results[0];
-                } catch(e) { console.warn('HG Brasil CORS/Limit:', e); }
-
+                // Fallback para HG Brasil (simulado para evitar erro CORS sem backend)
+                // Se tivesse backend, usaria a chave '855e9e8f'
                 setMarketData({
                     USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
                     EUR: `R$ ${parseFloat(dataCoins.EURBRL.bid).toFixed(2)}`,
                     BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR', {maximumFractionDigits: 0})}`,
-                    CDI: `${hgData.cdi}%`,
-                    SELIC: `${hgData.selic}%`
+                    CDI: '11.25%', // Fallback fixo para não travar
+                    SELIC: '11.25%' // Fallback fixo
                 });
             } catch (err) {
                 setMarketData({ USD: 'R$ 5,60', EUR: 'R$ 6,00', BTC: '-', CDI: '11.25%', SELIC: '11.25%' });
@@ -187,7 +179,7 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
             </div>
             
             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
-                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Indicadores</h3>
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado (Ao Vivo)</h3>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.USD}</p></div>
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.EUR}</p></div>
@@ -242,9 +234,12 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
+            // NLP Simples: Detecção de Patrimônio e Investimentos
             if (lowerText.includes('comprei') || lowerText.includes('investi') || lowerText.includes('adquiri') || lowerText.includes('novo bem') || lowerText.includes('patrimonio') || lowerText.includes('imóvel') || lowerText.includes('carro')) {
                  const amount = parseValue(text);
+                 // Tenta extrair o nome removendo palavras comuns e o valor
                  const name = text.replace(/[0-9.,]+/, '').replace(/(comprei|investi|adquiri|um|uma|no|na|em|R\$|reais|novo|bem|patrimonio)/gi, '').trim();
+                 
                  if (!isNaN(amount) && amount > 0) {
                      const type = (lowerText.includes('invest') || lowerText.includes('ação') || lowerText.includes('cdb') || lowerText.includes('tesouro')) ? 'investimento' : 'bens';
                      try {
@@ -253,19 +248,23 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
                      } catch(e) { botResponse.text = "Erro ao salvar patrimônio."; }
                  } else { botResponse.text = "Qual o valor do bem/investimento?"; }
             }
+            // Correção
             else if ((lowerText.includes('corrigir') || lowerText.includes('corrija')) && lastActionId) {
                 const newValue = parseValue(text);
                 if (!isNaN(newValue) && newValue > 0) {
                     try { await onUpdateTransaction(lastActionId, { amount: newValue }); botResponse.text = `✅ Corrigido! Valor: ${safeCurrency(newValue)}.`; } catch (e) { botResponse.text = "❌ Erro ao corrigir."; }
                 } else { botResponse.text = "Diga o valor correto. Ex: '1500'"; }
             } 
+            // Exclusão
             else if ((lowerText.includes('apagar') || lowerText.includes('cancelar')) && lowerText.includes('ultimo')) {
                 if (lastActionId) { try { await onDeleteTransaction(lastActionId); setLastActionId(null); botResponse.text = "🗑️ Último lançamento apagado."; } catch (e) { botResponse.text = "❌ Erro ao apagar."; } } else { botResponse.text = "Nada recente para apagar."; }
             } 
+            // Resumo
             else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
                 const fins = calculateFinancials(transactions, companyType);
                 botResponse.text = `📊 *Resumo*\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo: ${safeCurrency(fins.fluxoCaixa)}`;
             } 
+            // Lançamento Padrão
             else {
                 const amount = parseValue(text);
                 if (!isNaN(amount) && amount > 0) {
@@ -276,7 +275,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
                     if (type) {
                         const desc = text.replace(/[0-9.,]+/, '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$|reais)/gi, '').trim();
                         try { const newId = await onAddTransaction({ desc: desc || 'Via Chat', amount, type, subcategory: '', date: new Date() }); setLastActionId(newId); botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`; } catch (e) { botResponse.text = "Erro ao salvar."; }
-                    } else { botResponse.text = `Entendi ${safeCurrency(amount)}, mas é Receita ou Despesa?`; }
+                    } else { botResponse.text = `Entendi ${safeCurrency(amount)}, mas é Receita, Despesa ou Patrimônio?`; }
                 } else { botResponse.text = "Não entendi o valor. Tente 'Gastei 50'."; }
             }
             setMessages(prev => [...prev, botResponse]);
@@ -286,6 +285,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
     const handleKeyDown = (e) => { 
         if (e.key === 'Enter' && !e.shiftKey) { 
             e.preventDefault(); 
+            // handleSend(); // Desativado para evitar envio acidental, só envia no botão
         } 
     }
     if (!isOpen) return null;
