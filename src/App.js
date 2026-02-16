@@ -181,45 +181,38 @@ const ChatInterface = ({ onAddTransaction, currentCompany, transactions }) => {
         const text = inputText.toLowerCase();
         setInputText('');
 
-        // Simulação de "Digitando..."
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
 
-            // Lógica de Processamento de Linguagem Natural (Simples)
             if (text.includes('resumo') || text.includes('saldo') || text.includes('como estamos')) {
                 const fins = calculateFinancials(transactions, companyType);
                 botResponse.text = `📊 *Panorama Atual*\n\n💰 Entradas: ${safeCurrency(fins.receita)}\n💸 Saídas: ${safeCurrency(fins.totalSaidas)}\n\n📉 *Saldo Final: ${safeCurrency(fins.fluxoCaixa)}*`;
             } 
             else {
-                // Tentativa de identificar lançamento
                 const amountMatch = text.match(/\d+([.,]\d+)?/);
                 if (amountMatch) {
                     const amount = parseFloat(amountMatch[0].replace(',', '.'));
                     let type = '';
                     let typeLabel = '';
-                    let subcategory = '';
-
-                    // Palavras-chave para identificar tipo
+                    
                     if (['recebi', 'ganhei', 'venda', 'entrada', 'receita'].some(w => text.includes(w))) {
                         type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
                         typeLabel = 'Receita';
                     } else if (['gastei', 'paguei', 'saída', 'compra', 'custo'].some(w => text.includes(w))) {
-                        // Tenta ser mais específico
                         if (text.includes('imposto')) type = companyType === 'personal' ? TransactionTypePersonal.DIVIDAS : TransactionTypeBusiness.IMPOSTOS;
                         else if (text.includes('juro') || text.includes('multa')) type = companyType === 'personal' ? TransactionTypePersonal.DIVIDAS : TransactionTypeBusiness.JUROS_FINANCEIROS;
-                        else type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; // Default genérico
+                        else type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
                         typeLabel = 'Despesa';
                     }
 
                     if (type) {
-                        // Extrai descrição (remove valor e palavras chaves simples)
                         const desc = text.replace(amountMatch[0], '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$)/g, '').trim();
                         
                         await onAddTransaction({
                             desc: desc || 'Lançamento via Chat',
                             amount,
                             type,
-                            subcategory: '', // Pode ser aprimorado para detectar subcategoria
+                            subcategory: '', 
                             date: new Date()
                         });
                         botResponse.text = `✅ Feito! Lancei *${safeCurrency(amount)}* como ${typeLabel} ("${desc || 'Geral'}").`;
@@ -262,7 +255,7 @@ const ChatInterface = ({ onAddTransaction, currentCompany, transactions }) => {
     );
 };
 
-// ... (Outros componentes DREView, BudgetPlanningView, etc. mantidos iguais) ...
+// ... (DREView, BudgetPlanningView, CashFlowView, ChartsView, CategoryPieChart, CalculatorModal, ExportModal, PrintLayout, RepeatModal, InstallGuideModal, TutorialModal, Sidebar mantidos) ...
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
@@ -347,7 +340,6 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
         </div>
     );
 };
-// ... (BudgetPlanningView, CashFlowView, ChartsView, CategoryPieChart, CalculatorModal, ExportModal, PrintLayout, RepeatModal, InstallGuideModal, TutorialModal, Sidebar mantidos) ...
 
 const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, companyType }) => {
     const [localBudget, setLocalBudget] = useState({});
@@ -675,6 +667,7 @@ export default function App() {
         const hasSeenTutorial = localStorage.getItem('hasSeenFinTutorial');
         if (!hasSeenTutorial) setShowTutorial(true);
         
+        // Verifica notificação
         if (Notification.permission === 'granted') setNotificationsEnabled(true);
 
         if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey.startsWith('AIza')) { console.error("FIREBASE CONFIG NÃO ENCONTRADA OU INVÁLIDA"); return; }
@@ -689,6 +682,7 @@ export default function App() {
         if (darkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
     }, [darkMode]);
     
+    // Notificação simples ao carregar se tiver passado 24h
     useEffect(() => {
         if (notificationsEnabled) {
             const lastAccess = localStorage.getItem('lastAccess');
@@ -849,7 +843,7 @@ export default function App() {
             {repeatingTransaction && <RepeatModal onClose={() => setRepeatingTransaction(null)} onConfirm={confirmRepeat} transaction={repeatingTransaction} />}
             {showCalculator && <CalculatorModal onClose={() => setShowCalculator(false)} onConfirm={handleCalculatorFinish} />}
             
-            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={companyType} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={companyType} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
+            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={currentCompany?.type || 'business'} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={currentCompany?.type || 'business'} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
             
             <Sidebar 
                 isOpen={showSidebar} 
