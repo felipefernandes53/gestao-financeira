@@ -14,7 +14,7 @@ import {
     Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh
 } from 'lucide-react';
 
-// --- SUAS CHAVES REAIS DO FIREBASE ---
+// --- CONFIGURAÇÃO DO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
   authDomain: "app-financeiro-2f.firebaseapp.com",
@@ -27,8 +27,7 @@ const firebaseConfig = {
 
 const appId = "financial-app-production";
 
-// --- CONSTANTES GLOBAIS (DEFINIDAS NO TOPO PARA EVITAR ERROS) ---
-
+// --- CONSTANTES GLOBAIS ---
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const PERIOD_OPTIONS = [
     { value: 0, label: 'Jan' }, { value: 1, label: 'Fev' }, { value: 2, label: 'Mar' },
@@ -41,8 +40,15 @@ const PERIOD_OPTIONS = [
     { value: 'Y', label: 'Ano Completo' },
 ];
 
-// Categorias Empresariais
-const TransactionTypeBusiness = { RECEITA: 'Receita', CUSTO: 'Custo', DESPESA_OPERACIONAL: 'Despesa Operacional', JUROS_FINANCEIROS: 'Juros/Financeiro', IMPOSTOS: 'Impostos' };
+// --- CATEGORIAS EMPRESARIAIS ---
+const TransactionTypeBusiness = { 
+    RECEITA: 'Receita', 
+    CUSTO: 'Custo', 
+    DESPESA_OPERACIONAL: 'Despesa Operacional', 
+    JUROS_FINANCEIROS: 'Juros/Financeiro', 
+    IMPOSTOS: 'Impostos' 
+};
+
 const DEFAULT_SUBCATEGORIES_BUSINESS = {
     [TransactionTypeBusiness.RECEITA]: ['Vendas de Produtos', 'Prestação de Serviços', 'Rendimentos', 'Outras Receitas'],
     [TransactionTypeBusiness.CUSTO]: ['Compra de Mercadoria (CMV)', 'Matéria-Prima', 'Embalagens', 'Fretes'],
@@ -50,6 +56,7 @@ const DEFAULT_SUBCATEGORIES_BUSINESS = {
     [TransactionTypeBusiness.JUROS_FINANCEIROS]: ['Tarifas Bancárias', 'Juros Empréstimos', 'Multas'],
     [TransactionTypeBusiness.IMPOSTOS]: ['Simples Nacional', 'ICMS', 'ISS', 'PIS', 'COFINS', 'IRPJ', 'CSLL']
 };
+
 const categoriesBusiness = [
     { value: TransactionTypeBusiness.RECEITA, label: 'Receita (+)', color: 'text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/30', isPositive: true },
     { value: TransactionTypeBusiness.CUSTO, label: 'Custos (-)', color: 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-900/30', isPositive: false },
@@ -58,8 +65,19 @@ const categoriesBusiness = [
     { value: TransactionTypeBusiness.IMPOSTOS, label: 'Impostos (-)', color: 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30', isPositive: false },
 ];
 
-// Categorias Pessoais
-const TransactionTypePersonal = { RECEITA: 'Renda', MORADIA: 'Moradia', ALIMENTACAO: 'Alimentação', TRANSPORTE: 'Transporte', LAZER: 'Lazer/Estilo de Vida', SAUDE: 'Saúde', EDUCACAO: 'Educação', INVESTIMENTOS: 'Investimentos/Poupança', DIVIDAS: 'Dívidas/Empréstimos' };
+// --- CATEGORIAS PESSOAIS ---
+const TransactionTypePersonal = { 
+    RECEITA: 'Renda', 
+    MORADIA: 'Moradia', 
+    ALIMENTACAO: 'Alimentação', 
+    TRANSPORTE: 'Transporte', 
+    LAZER: 'Lazer/Estilo de Vida', 
+    SAUDE: 'Saúde', 
+    EDUCACAO: 'Educação', 
+    INVESTIMENTOS: 'Investimentos/Poupança', 
+    DIVIDAS: 'Dívidas/Empréstimos' 
+};
+
 const DEFAULT_SUBCATEGORIES_PERSONAL = {
     [TransactionTypePersonal.RECEITA]: ['Salário', 'Freelance', 'Dividendos', 'Aluguéis Recebidos'],
     [TransactionTypePersonal.MORADIA]: ['Aluguel/Condomínio', 'Luz', 'Água', 'Internet', 'Gás', 'Manutenção'],
@@ -71,6 +89,7 @@ const DEFAULT_SUBCATEGORIES_PERSONAL = {
     [TransactionTypePersonal.INVESTIMENTOS]: ['Reserva de Emergência', 'Ações/FIIs', 'CDB/Tesouro'],
     [TransactionTypePersonal.DIVIDAS]: ['Cartão de Crédito', 'Empréstimo Pessoal', 'Financiamento']
 };
+
 const categoriesPersonal = [
     { value: TransactionTypePersonal.RECEITA, label: 'Renda (+)', color: 'text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/30', isPositive: true },
     { value: TransactionTypePersonal.MORADIA, label: 'Moradia (-)', color: 'text-orange-700 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30', isPositive: false },
@@ -83,28 +102,51 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// VARIÁVEL DE SEGURANÇA (Obrigatória para inicialização do state)
+// VARIÁVEL DE SEGURANÇA GLOBAL
 const transactionCategories = categoriesBusiness; 
-
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
 // --- HELPERS ---
-const safeCurrency = (value) => { if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00'; try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); } catch (e) { return 'R$ Error'; } };
-const safeDate = (timestamp) => { if (!timestamp || typeof timestamp.toDate !== 'function') return 'Data N/A'; try { return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(timestamp.toDate()); } catch (e) { return 'Inválida'; } };
-const safePercent = (value, total) => { if (!total || total === 0) return '0.0%'; return `${((value / total) * 100).toFixed(1)}%`; };
+const safeCurrency = (value) => { 
+    if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00'; 
+    try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); } 
+    catch (e) { return 'R$ Error'; } 
+};
 
+const safeDate = (timestamp) => { 
+    if (!timestamp || typeof timestamp.toDate !== 'function') return 'Data N/A'; 
+    try { return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(timestamp.toDate()); } 
+    catch (e) { return 'Inválida'; } 
+};
+
+const safePercent = (value, total) => { 
+    if (!total || total === 0) return '0.0%'; 
+    return `${((value / total) * 100).toFixed(1)}%`; 
+};
+
+// Funções de Cálculo (Modificadas para aceitar tipo)
 const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const safeData = Array.isArray(data) ? data : [];
     const cats = type === 'personal' ? categoriesPersonal : categoriesBusiness;
+    
     const sumByType = (tType) => safeData.reduce((acc, t) => t.type === tType ? acc + (Number(t.amount) || 0) : acc, 0);
     
     const subcatTotals = {};
-    safeData.forEach(t => { if (t.subcategory) { const key = `${t.type}:${t.subcategory}`; subcatTotals[key] = (subcatTotals[key] || 0) + (Number(t.amount) || 0); } });
+    safeData.forEach(t => { 
+        if (t.subcategory) { 
+            const key = `${t.type}:${t.subcategory}`; 
+            subcatTotals[key] = (subcatTotals[key] || 0) + (Number(t.amount) || 0); 
+        } 
+    });
 
     const receitaKey = type === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
     const receita = sumByType(receitaKey);
+    
     let totalSaidas = 0;
-    cats.forEach(cat => { if (!cat.isPositive) totalSaidas += sumByType(cat.value); });
+    cats.forEach(cat => { 
+        if (!cat.isPositive) totalSaidas += sumByType(cat.value); 
+    });
+
     const fluxoCaixa = receita - totalSaidas;
     
     const safeAssets = Array.isArray(assets) ? assets : [];
@@ -113,7 +155,10 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const patrimonioLiquido = (totalBens + totalInvest + fluxoCaixa);
 
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals, totalBens, totalInvest, patrimonioLiquido };
-    cats.forEach(cat => { financials[cat.value] = sumByType(cat.value); });
+    
+    cats.forEach(cat => { 
+        financials[cat.value] = sumByType(cat.value); 
+    });
     
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
@@ -123,7 +168,7 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     return financials;
 };
 
-// --- COMPONENTES ---
+// --- COMPONENTES AUXILIARES ---
 
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
@@ -135,17 +180,23 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     useEffect(() => {
         const fetchMarketData = async () => {
             try {
+                const key = '855e9e8f';
                 const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
                 const dataCoins = await resCoins.json();
                 
-                // Fallback para HG Brasil (simulado para evitar erro CORS sem backend)
-                // Se tivesse backend, usaria a chave '855e9e8f'
+                let hgData = { cdi: 11.25, selic: 11.25 }; 
+                try {
+                    const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
+                    const jsonHg = await resHg.json();
+                    if(jsonHg.results && jsonHg.results[0]) hgData = jsonHg.results[0];
+                } catch(e) { console.warn('HG Brasil CORS:', e); }
+
                 setMarketData({
                     USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
                     EUR: `R$ ${parseFloat(dataCoins.EURBRL.bid).toFixed(2)}`,
                     BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR', {maximumFractionDigits: 0})}`,
-                    CDI: '11.25%', // Fallback fixo para não travar
-                    SELIC: '11.25%' // Fallback fixo
+                    CDI: `${hgData.cdi}%`,
+                    SELIC: `${hgData.selic}%`
                 });
             } catch (err) {
                 setMarketData({ USD: 'R$ 5,60', EUR: 'R$ 6,00', BTC: '-', CDI: '11.25%', SELIC: '11.25%' });
@@ -179,13 +230,13 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
             </div>
             
             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
-                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado (Ao Vivo)</h3>
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Indicadores</h3>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.USD}</p></div>
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.EUR}</p></div>
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.BTC}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
                 </div>
             </div>
 
@@ -210,6 +261,7 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     );
 };
 
+// ... ChatInterface (Atualizado com NLP de Patrimônio) ...
 const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
     const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou seu assistente financeiro.", sender: 'bot' }]);
     const [inputText, setInputText] = useState('');
@@ -221,6 +273,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
 
     const parseValue = (text) => {
         let clean = text.replace(/[^0-9.,-]/g, '');
+        // Lógica: Se tem vírgula, ela é decimal. Se só tem ponto, remove (milhar).
         if (clean.includes(',')) { clean = clean.replace(/\./g, '').replace(',', '.'); } else { clean = clean.replace(/\./g, ''); }
         return parseFloat(clean);
     };
@@ -234,49 +287,43 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
-            // NLP Simples: Detecção de Patrimônio e Investimentos
-            if (lowerText.includes('comprei') || lowerText.includes('investi') || lowerText.includes('adquiri') || lowerText.includes('novo bem') || lowerText.includes('patrimonio') || lowerText.includes('imóvel') || lowerText.includes('carro')) {
+            // NLP: Patrimônio
+            if (lowerText.includes('comprei') || lowerText.includes('investi') || lowerText.includes('adquiri') || lowerText.includes('novo bem')) {
                  const amount = parseValue(text);
-                 // Tenta extrair o nome removendo palavras comuns e o valor
-                 const name = text.replace(/[0-9.,]+/, '').replace(/(comprei|investi|adquiri|um|uma|no|na|em|R\$|reais|novo|bem|patrimonio)/gi, '').trim();
-                 
+                 const name = text.replace(/[0-9.,]+/, '').replace(/(comprei|investi|adquiri|um|uma|no|na|em|R\$|reais)/gi, '').trim();
                  if (!isNaN(amount) && amount > 0) {
-                     const type = (lowerText.includes('invest') || lowerText.includes('ação') || lowerText.includes('cdb') || lowerText.includes('tesouro')) ? 'investimento' : 'bens';
+                     const type = (lowerText.includes('invest') || lowerText.includes('ação') || lowerText.includes('cdb')) ? 'investimento' : 'bens';
                      try {
                          await onAddAsset({ name: name || 'Novo Item', value: amount, type, indexer: '', createdAt: Timestamp.now() });
                          botResponse.text = `🏛️ Patrimônio Adicionado: ${name || 'Item'} de ${safeCurrency(amount)}.`;
-                     } catch(e) { botResponse.text = "Erro ao salvar patrimônio."; }
-                 } else { botResponse.text = "Qual o valor do bem/investimento?"; }
+                     } catch(e) { botResponse.text = "Erro ao salvar."; }
+                 } else { botResponse.text = "Qual o valor?"; }
             }
-            // Correção
+            // NLP: Correção
             else if ((lowerText.includes('corrigir') || lowerText.includes('corrija')) && lastActionId) {
                 const newValue = parseValue(text);
                 if (!isNaN(newValue) && newValue > 0) {
-                    try { await onUpdateTransaction(lastActionId, { amount: newValue }); botResponse.text = `✅ Corrigido! Valor: ${safeCurrency(newValue)}.`; } catch (e) { botResponse.text = "❌ Erro ao corrigir."; }
+                    try { await onUpdateTransaction(lastActionId, { amount: newValue }); botResponse.text = `✅ Corrigido! Valor: ${safeCurrency(newValue)}.`; } catch (e) { botResponse.text = "Erro ao corrigir."; }
                 } else { botResponse.text = "Diga o valor correto. Ex: '1500'"; }
             } 
-            // Exclusão
-            else if ((lowerText.includes('apagar') || lowerText.includes('cancelar')) && lowerText.includes('ultimo')) {
-                if (lastActionId) { try { await onDeleteTransaction(lastActionId); setLastActionId(null); botResponse.text = "🗑️ Último lançamento apagado."; } catch (e) { botResponse.text = "❌ Erro ao apagar."; } } else { botResponse.text = "Nada recente para apagar."; }
-            } 
-            // Resumo
+            // NLP: Resumo
             else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
                 const fins = calculateFinancials(transactions, companyType);
                 botResponse.text = `📊 *Resumo*\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo: ${safeCurrency(fins.fluxoCaixa)}`;
             } 
-            // Lançamento Padrão
+            // NLP: Transação Padrão
             else {
                 const amount = parseValue(text);
                 if (!isNaN(amount) && amount > 0) {
                     let type = ''; let typeLabel = '';
                     if (['recebi', 'ganhei', 'venda', 'entrada'].some(w => lowerText.includes(w))) { type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA; typeLabel = 'Receita'; }
-                    else if (['gastei', 'paguei', 'saída', 'compra', 'boleto', 'internet', 'luz', 'agua'].some(w => lowerText.includes(w))) { typeLabel = 'Despesa'; type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; }
+                    else if (['gastei', 'paguei', 'saída', 'compra', 'boleto'].some(w => lowerText.includes(w))) { typeLabel = 'Despesa'; type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; }
                     
                     if (type) {
                         const desc = text.replace(/[0-9.,]+/, '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$|reais)/gi, '').trim();
                         try { const newId = await onAddTransaction({ desc: desc || 'Via Chat', amount, type, subcategory: '', date: new Date() }); setLastActionId(newId); botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`; } catch (e) { botResponse.text = "Erro ao salvar."; }
-                    } else { botResponse.text = `Entendi ${safeCurrency(amount)}, mas é Receita, Despesa ou Patrimônio?`; }
-                } else { botResponse.text = "Não entendi o valor. Tente 'Gastei 50'."; }
+                    } else { botResponse.text = `Entendi ${safeCurrency(amount)}, mas é Receita ou Despesa?`; }
+                } else { botResponse.text = "Não entendi. Tente 'Gastei 50'."; }
             }
             setMessages(prev => [...prev, botResponse]);
         }, 500);
@@ -285,7 +332,6 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
     const handleKeyDown = (e) => { 
         if (e.key === 'Enter' && !e.shiftKey) { 
             e.preventDefault(); 
-            // handleSend(); // Desativado para evitar envio acidental, só envia no botão
         } 
     }
     if (!isOpen) return null;
@@ -298,7 +344,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
     );
 };
 
-// ... COMPONENTES AUXILIARES ...
+// ... COMPONENTES MODAIS (Mantidos iguais) ...
 const CalculatorModal=({onClose,onConfirm})=>{const [e,setE]=useState('');const h=(v)=>{if(v==='C')setE('');else if(v==='='){try{setE(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))))}catch{setE('Erro')}}else setE(p=>p+v)};const c=()=>{try{onConfirm(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))).replace('.',','))}catch{}};const b=['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm"><div className="flex justify-between mb-4"><h3 className="font-bold dark:text-white">Calculadora</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-4 rounded mb-4 text-right font-bold dark:text-white text-2xl">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{b.map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded font-bold dark:text-white">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-slate-200 p-3 rounded">=</button></div><button onClick={c} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">USAR</button></div></div>)};
 const RepeatModal=({onClose,onConfirm,transaction})=>{const [c,setC]=useState(1);return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full"><h3 className="font-bold mb-4 dark:text-white">Repetir</h3><input type="number" value={c} onChange={e=>setC(e.target.value)} className="w-full p-2 border rounded mb-4 dark:bg-slate-900 dark:text-white"/><button onClick={()=>onConfirm(c)} className="w-full bg-indigo-600 text-white p-2 rounded">Confirmar</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Cancelar</button></div></div>)};
 const ExportModal=({onClose,csvContent,fileName})=>{const [c,setC]=useState(false);const r=useRef(null);const h=()=>{if(r.current){r.current.select();document.execCommand('copy');setC(true)}};return(<div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"><div className="bg-white p-6 rounded-xl max-w-lg w-full"><h3 className="font-bold text-lg mb-2">Exportar CSV</h3><textarea ref={r} readOnly value={csvContent} className="w-full h-32 p-2 border rounded mb-4 text-xs font-mono"/><button onClick={h} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">{c?'Copiado!':'Copiar'}</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Fechar</button></div></div>)};
@@ -314,21 +360,44 @@ const Sidebar = ({ isOpen, onClose, companies, currentCompany, onChangeCompany, 
 };
 
 export default function App() {
-    const [user, setUser] = useState(null); const [db, setDb] = useState(null); const [companies, setCompanies] = useState([]); const [currentCompany, setCurrentCompany] = useState(null);
-    const [transactions, setTransactions] = useState([]); const [subcategories, setSubcategories] = useState({}); const [budget, setBudget] = useState({}); const [assets, setAssets] = useState([]);
-    const [loading, setLoading] = useState(true); const [mainTab, setMainTab] = useState('lancamentos'); const [resultTab, setResultTab] = useState('dre');
-    const [period, setPeriod] = useState(new Date().getMonth()); const [year, setYear] = useState(new Date().getFullYear());
-    const [showSettings, setShowSettings] = useState(false); const [searchTerm, setSearchTerm] = useState(''); const [showTutorial, setShowTutorial] = useState(false); const [showSidebar, setShowSidebar] = useState(false);
-    const [darkMode, setDarkMode] = useState(false); const [showExportModal, setShowExportModal] = useState(false); const [csvContentToExport, setCsvContentToExport] = useState('');
-    const [exportFileName, setExportFileName] = useState(''); const [showInstallGuide, setShowInstallGuide] = useState(false); const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [showPrintPreview, setShowPrintPreview] = useState(false); const [showCalculator, setShowCalculator] = useState(false); const [showChat, setShowChat] = useState(false);
+    const [user, setUser] = useState(null); 
+    const [db, setDb] = useState(null); 
+    const [companies, setCompanies] = useState([]); 
+    const [currentCompany, setCurrentCompany] = useState(null);
+    const [transactions, setTransactions] = useState([]); 
+    const [subcategories, setSubcategories] = useState({}); 
+    const [budget, setBudget] = useState({}); 
+    const [assets, setAssets] = useState([]);
+    const [loading, setLoading] = useState(true); 
+    const [mainTab, setMainTab] = useState('lancamentos'); 
+    const [resultTab, setResultTab] = useState('dre');
+    const [period, setPeriod] = useState(new Date().getMonth()); 
+    const [year, setYear] = useState(new Date().getFullYear());
+    const [showSettings, setShowSettings] = useState(false); 
+    const [searchTerm, setSearchTerm] = useState(''); 
+    const [showTutorial, setShowTutorial] = useState(false); 
+    const [showSidebar, setShowSidebar] = useState(false);
+    const [darkMode, setDarkMode] = useState(false); 
+    const [showExportModal, setShowExportModal] = useState(false); 
+    const [csvContentToExport, setCsvContentToExport] = useState('');
+    const [exportFileName, setExportFileName] = useState(''); 
+    const [showInstallGuide, setShowInstallGuide] = useState(false); 
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [showPrintPreview, setShowPrintPreview] = useState(false); 
+    const [showCalculator, setShowCalculator] = useState(false); 
+    const [showChat, setShowChat] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     
     // States for forms
-    const [editingTransaction, setEditingTransaction] = useState(null); const [repeatingTransaction, setRepeatingTransaction] = useState(null);
-    const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]); const [formType, setFormType] = useState(transactionCategories[0].value);
-    const [formSubcat, setFormSubcat] = useState(''); const [formDesc, setFormDesc] = useState(''); const [formAmount, setFormAmount] = useState('');
-    const [isRecurring, setIsRecurring] = useState(false); const [recurringMonths, setRecurringMonths] = useState(1);
+    const [editingTransaction, setEditingTransaction] = useState(null); 
+    const [repeatingTransaction, setRepeatingTransaction] = useState(null);
+    const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]); 
+    const [formType, setFormType] = useState(transactionCategories[0].value);
+    const [formSubcat, setFormSubcat] = useState(''); 
+    const [formDesc, setFormDesc] = useState(''); 
+    const [formAmount, setFormAmount] = useState('');
+    const [isRecurring, setIsRecurring] = useState(false); 
+    const [recurringMonths, setRecurringMonths] = useState(1);
     const [newSubcatName, setNewSubcatName] = useState('');
 
     const companyType = currentCompany?.type || 'business';
@@ -388,6 +457,8 @@ export default function App() {
     const searchedData = useMemo(() => { if(!searchTerm.trim())return filteredData; return filteredData.filter(t=>t.desc.toLowerCase().includes(searchTerm.toLowerCase())); }, [filteredData, searchTerm]);
     const handleCompanyChange = (c) => { setCurrentCompany(c); localStorage.setItem('lastCompanyId', c.id); };
     const resetForm = () => { setEditingTransaction(null); setFormDesc(''); setFormAmount(''); setIsRecurring(false); };
+    
+    // Core Functions
     const handleSaveTransaction = async (e) => { e.preventDefault(); if (!currentCompany) return; const val = parseFloat(formAmount.replace(',', '.')); if (isNaN(val)) return; const parts = formDate.split('-'); const date = new Date(Date.UTC(parts[0], parts[1]-1, parts[2], 12)); const data = { desc: formDesc, amount: val, type: formType, subcategory: formSubcat, createdAt: Timestamp.fromDate(date) }; const ref = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`); if (editingTransaction) await updateDoc(doc(ref, editingTransaction.id), data); else if (isRecurring && recurringMonths > 1) { const b = writeBatch(db); for(let i=0; i<recurringMonths; i++) { const d = new Date(date); d.setUTCMonth(date.getUTCMonth() + i); b.set(doc(ref), {...data, createdAt: Timestamp.fromDate(d)}); } await b.commit(); } else await addDoc(ref, data); resetForm(); };
     const handleAddAsset = async (data) => { await addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), data); };
     const handleDeleteAsset = async (id) => { if (window.confirm("Excluir?")) await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`, id)); };
@@ -426,7 +497,7 @@ export default function App() {
             
             {showSettings && <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 p-6 rounded-xl w-full max-w-lg h-[80vh] overflow-y-auto"><div className="flex justify-between mb-4"><h2 className="font-bold text-xl">Categorias</h2><button onClick={()=>setShowSettings(false)}><LucideX/></button></div><div className="mb-8 p-4 bg-indigo-50 dark:bg-indigo-900 rounded flex justify-between"><div><h4>Notificações</h4><p className="text-xs">Lembretes diários.</p></div><button onClick={requestNotificationPermission}><LucideBell/></button></div>{activeCategories.map(cat => (<div key={cat.value} className="mb-6"><h3 className={`font-bold text-sm ${cat.color.split(' ')[0]}`}>{cat.label}</h3><div className="flex gap-2 my-2"><input className="border p-2 rounded flex-1 dark:bg-slate-900" placeholder="Nova" value={newSubcatName} onChange={e=>setNewSubcatName(e.target.value)} /><button onClick={()=>{handleAddSub(cat.value)}} className="bg-indigo-600 text-white p-2 rounded"><LucidePlus/></button></div><div className="flex flex-wrap gap-2">{subcategories[cat.value]?.map(s=><div key={s.id} className="bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full text-sm flex gap-2">{s.name} <button onClick={()=>handleDeleteSub(s.id)} className="text-red-500"><LucideX size={14}/></button></div>)}</div></div>))}</div></div>}
 
-            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={companyType} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={companyType} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{transactionCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
+            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={companyType} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={companyType} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
 
             <header className="max-w-5xl mx-auto p-4 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
@@ -510,8 +581,8 @@ export default function App() {
                          <div className="flex gap-2 overflow-x-auto pb-2">
                             {['dre', 'fluxo', 'graficos', 'subcategorias'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-3 py-1 rounded-full text-sm font-bold ${resultTab === k ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{k.toUpperCase()}</button>))}
                          </div>
-                         {resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} />}
-                         {resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} />}
+                         {resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} isPrintMode={false} />}
+                         {resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} isPrintMode={false} />}
                          {resultTab === 'graficos' && <ChartsView allTransactions={transactions} companyType={companyType} />}
                          {resultTab === 'subcategorias' && <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL} /></div>}
                     </div>
