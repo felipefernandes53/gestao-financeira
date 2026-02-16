@@ -14,6 +14,10 @@ import {
     Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh
 } from 'lucide-react';
 
+// ============================================================================
+// 1. CONFIGURAÇÕES E CONSTANTES GLOBAIS
+// ============================================================================
+
 // --- SUAS CHAVES REAIS DO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
@@ -27,7 +31,6 @@ const firebaseConfig = {
 
 const appId = "financial-app-production";
 
-// --- CONSTANTES GLOBAIS ---
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const PERIOD_OPTIONS = [
     { value: 0, label: 'Jan' }, { value: 1, label: 'Fev' }, { value: 2, label: 'Mar' },
@@ -38,8 +41,10 @@ const PERIOD_OPTIONS = [
     { value: 'Q3', label: '3º Trimestre' }, { value: 'Q4', label: '4º Trimestre' },
     { value: 'S1', label: '1º Semestre' }, { value: 'S2', label: '2º Semestre' },
     { value: 'Y', label: 'Ano Atual' },
-    { value: 'ALL', label: 'Tudo (Todos os Anos)' } // NOVA OPÇÃO
+    { value: 'ALL', label: 'Todo o Período' }
 ];
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
 // --- CATEGORIAS EMPRESARIAIS ---
 const TransactionTypeBusiness = { 
@@ -103,11 +108,13 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// VARIÁVEL DE SEGURANÇA GLOBAL
+// *** VARIÁVEL DE SEGURANÇA OBRIGATÓRIA (EVITA O ERRO FATAL) ***
 const transactionCategories = categoriesBusiness; 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
-// --- HELPERS ---
+// ============================================================================
+// 2. FUNÇÕES AUXILIARES (HELPERS)
+// ============================================================================
+
 const safeCurrency = (value) => { 
     if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00'; 
     try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); } 
@@ -128,7 +135,6 @@ const safePercent = (value, total) => {
 // Lógica de Cálculo Financeiro
 const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const safeData = Array.isArray(data) ? data : [];
-    // Seleciona o conjunto de categorias correto
     const cats = type === 'personal' ? categoriesPersonal : categoriesBusiness;
     
     const sumByType = (tType) => safeData.reduce((acc, t) => t.type === tType ? acc + (Number(t.amount) || 0) : acc, 0);
@@ -151,7 +157,6 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
 
     const fluxoCaixa = receita - totalSaidas;
     
-    // Cálculo Patrimonial
     const safeAssets = Array.isArray(assets) ? assets : [];
     const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
     const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
@@ -159,12 +164,10 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
 
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals, totalBens, totalInvest, patrimonioLiquido };
     
-    // Popula totais por categoria
     cats.forEach(cat => { 
         financials[cat.value] = sumByType(cat.value); 
     });
     
-    // Cálculos específicos de Empresa
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
         financials.ebitda = financials.lucroBruto - financials[TransactionTypeBusiness.DESPESA_OPERACIONAL];
@@ -174,9 +177,10 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     return financials;
 };
 
-// --- COMPONENTES VISUAIS ---
+// ============================================================================
+// 3. SUB-COMPONENTES
+// ============================================================================
 
-// Componente: Visualização de Patrimônio
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
@@ -184,7 +188,6 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [indexer, setIndexer] = useState('');
     const [marketData, setMarketData] = useState({ USD: '...', EUR: '...', BTC: '...', CDI: '...', SELIC: '...' });
 
-    // Busca dados de mercado
     useEffect(() => {
         const fetchMarketData = async () => {
             try {
@@ -192,27 +195,23 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                 const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
                 const dataCoins = await resCoins.json();
                 
-                // Índices via HG Brasil (Simulado fallback se falhar por CORS)
+                // Índices via HG Brasil
                 let hgData = { cdi: 11.25, selic: 11.25 }; 
                 try {
                     const key = '855e9e8f';
                     const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
                     const jsonHg = await resHg.json();
                     if(jsonHg.results && jsonHg.results[0]) hgData = jsonHg.results[0];
-                } catch(e) { 
-                    console.log('API Limit/CORS, usando fallback'); 
-                }
+                } catch(e) { console.log('HG Brasil CORS fallback'); }
 
                 setMarketData({
                     USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
                     EUR: `R$ ${parseFloat(dataCoins.EURBRL.bid).toFixed(2)}`,
-                    BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR', {maximumFractionDigits: 0})}`,
+                    BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR', {maximumFractionDigits:0})}`,
                     CDI: `${hgData.cdi}%`,
                     SELIC: `${hgData.selic}%`
                 });
-            } catch (err) {
-                setMarketData({ USD: 'R$ 5,60', EUR: 'R$ 6,00', BTC: '-', CDI: '11.25%', SELIC: '11.25%' });
-            }
+            } catch (err) { setMarketData({ USD: 'R$ 5,60', EUR: 'R$ 6,00', BTC: '-', CDI: '11.25%', SELIC: '11.25%' }); }
         };
         fetchMarketData();
     }, []);
@@ -228,6 +227,16 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
     const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
 
+    const getProjection = (val, idx) => {
+        let rate = 0;
+        if(idx === 'CDI' || idx === 'SELIC') rate = 0.1125;
+        if(idx === 'IPCA') rate = 0.045;
+        if(idx === 'INCC') rate = 0.04;
+        if(rate === 0) return '-';
+        const projected = val * (1 + rate);
+        return safeCurrency(projected);
+    };
+
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -242,13 +251,13 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
             </div>
             
             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
-                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado Hoje</h3>
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado (Ao Vivo)</h3>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.USD}</p></div>
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.EUR}</p></div>
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.BTC}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
                 </div>
             </div>
 
@@ -264,8 +273,8 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
             </div>
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400"><tr><th className="p-4">Item</th><th className="p-4">Tipo</th><th className="p-4">Índice</th><th className="p-4 text-right">Valor Atual</th><th className="p-4 w-10"></th></tr></thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">{safeAssets.map(a => (<tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30"><td className="p-4 font-medium text-slate-800 dark:text-slate-200">{a.name}</td><td className="p-4 text-slate-500 dark:text-slate-400 capitalize">{a.type}</td><td className="p-4 text-slate-500 dark:text-slate-400">{a.indexer || '-'}</td><td className="p-4 text-right font-bold text-slate-700 dark:text-slate-200">{safeCurrency(a.value)}</td><td className="p-4"><button onClick={() => onDeleteAsset(a.id)} className="text-red-400 hover:text-red-600"><LucideTrash2 size={16}/></button></td></tr>))}</tbody>
+                    <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400"><tr><th className="p-4">Item</th><th className="p-4">Tipo</th><th className="p-4">Índice</th><th className="p-4 text-right">Valor Atual</th><th className="p-4 text-right">Projeção (+12m)</th><th className="p-4 w-10"></th></tr></thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">{safeAssets.map(a => (<tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30"><td className="p-4 font-medium text-slate-800 dark:text-slate-200">{a.name}</td><td className="p-4 text-slate-500 dark:text-slate-400 capitalize">{a.type}</td><td className="p-4 text-slate-500 dark:text-slate-400">{a.indexer || '-'}</td><td className="p-4 text-right font-bold text-slate-700 dark:text-slate-200">{safeCurrency(a.value)}</td><td className="p-4 text-right text-green-600 dark:text-green-400">{getProjection(a.value, a.indexer)}</td><td className="p-4"><button onClick={() => onDeleteAsset(a.id)} className="text-red-400 hover:text-red-600"><LucideTrash2 size={16}/></button></td></tr>))}</tbody>
                  </table>
                  {safeAssets.length === 0 && <div className="p-8 text-center text-slate-400">Nenhum item cadastrado.</div>}
             </div>
@@ -273,14 +282,12 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     );
 };
 
-// Componente: Interface do Chatbot
-const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
+const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
     const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou seu assistente financeiro.", sender: 'bot' }]);
     const [inputText, setInputText] = useState('');
     const [lastActionId, setLastActionId] = useState(null);
     const messagesEndRef = useRef(null);
     const companyType = currentCompany?.type || 'business';
-    
     const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
     useEffect(() => { if (isOpen) scrollToBottom(); }, [messages, isOpen]);
 
@@ -299,115 +306,74 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
-            // PALAVRAS-CHAVE INTELIGENTES (NLP 2.0)
-            const expenseKeywords = ['gastei', 'paguei', 'saída', 'compra', 'boleto', 'internet', 'luz', 'agua', 'despesa', 'conta', 'pagamento'];
-            const incomeKeywords = ['recebi', 'ganhei', 'venda', 'entrada', 'receita', 'lucro', 'salario', 'renda'];
-            const assetKeywords = ['comprei', 'investi', 'adquiri', 'novo bem', 'patrimonio', 'imóvel', 'carro', 'aplicação', 'tesouro', 'cdb', 'ações'];
-            const recurrenceKeywords = ['recorrente', 'fixa', 'mensal', 'meses', 'repetir', 'todo mês'];
-
-            // 1. NLP: Patrimônio
-            if (assetKeywords.some(w => lowerText.includes(w)) && !recurrenceKeywords.some(w => lowerText.includes(w))) {
+            // NLP Simples
+            if (lowerText.includes('comprei') || lowerText.includes('investi') || lowerText.includes('adquiri') || lowerText.includes('novo bem') || lowerText.includes('patrimonio') || lowerText.includes('imóvel') || lowerText.includes('carro')) {
                  const amount = parseValue(text);
-                 const name = text.replace(/[0-9.,]+/, '').replace(new RegExp(`(${assetKeywords.join('|')}|um|uma|no|na|em|R\\$|reais)`, 'gi'), '').trim();
+                 const name = text.replace(/[0-9.,]+/, '').replace(/(comprei|investi|adquiri|um|uma|no|na|em|R\$|reais|novo|bem|patrimonio)/gi, '').trim();
                  if (!isNaN(amount) && amount > 0) {
                      const type = (lowerText.includes('invest') || lowerText.includes('ação') || lowerText.includes('cdb') || lowerText.includes('tesouro')) ? 'investimento' : 'bens';
                      try {
                          await onAddAsset({ name: name || 'Novo Item', value: amount, type, indexer: '', createdAt: Timestamp.now() });
                          botResponse.text = `🏛️ Patrimônio Adicionado: ${name || 'Item'} de ${safeCurrency(amount)}.`;
                      } catch(e) { botResponse.text = "Erro ao salvar patrimônio."; }
-                 } else { botResponse.text = "Qual o valor?"; }
+                 } else { botResponse.text = "Qual o valor do bem/investimento?"; }
             }
-            // 2. NLP: Recorrência / Fixas
-            else if (recurrenceKeywords.some(w => lowerText.includes(w))) {
+            else if (lowerText.includes('meses') && (lowerText.includes('por') || lowerText.includes('durante'))) {
                 const amount = parseValue(text);
-                // Tenta achar o número de meses (ex: "por 12 meses")
                 const monthsMatch = text.match(/(\d+)\s*meses/);
-                const months = monthsMatch ? parseInt(monthsMatch[1]) : 12; // Default 12 se não disser
+                const months = monthsMatch ? parseInt(monthsMatch[1]) : 12;
                 
                 if (!isNaN(amount) && amount > 0) {
-                    const desc = text.replace(/[0-9.,]+/, '').replace(new RegExp(`(${[...expenseKeywords, ...recurrenceKeywords].join('|')}|R\\$)`, 'gi'), '').trim();
+                    const desc = text.replace(/[0-9.,]+/, '').replace(/(meses|por|durante|despesa|fixa|R\$|reais)/gi, '').trim();
+                    const type = companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL;
+                    
                     try {
-                         const batch = writeBatch(useFirestore()); // Pseudo-hook, logicamente vai usar o db do pai
-                         // Nota: Passar db via prop seria melhor, mas aqui vamos usar onAddTransaction simples e repetir no loop
-                         const today = new Date();
-                         for (let i = 0; i < months; i++) {
-                             const nextDate = new Date(today);
-                             nextDate.setMonth(today.getMonth() + i);
-                             await onAddTransaction({ 
-                                 desc: `${desc || 'Despesa Fixa'} (${i+1}/${months})`, 
-                                 amount, 
-                                 type: companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL, 
-                                 subcategory: '', 
-                                 date: nextDate 
-                             });
-                         }
-                         botResponse.text = `🔄 Agendado! ${months} parcelas de ${safeCurrency(amount)} para "${desc || 'Despesa Fixa'}".`;
-                    } catch(e) { botResponse.text = `✅ Iniciei o agendamento de ${months} meses.`; }
-                } else {
-                     botResponse.text = "Entendi que é recorrente, mas qual o valor?";
-                }
+                        await onAddRecurringTransaction({ 
+                            desc: desc || 'Despesa Fixa', 
+                            amount, 
+                            type, 
+                            subcategory: 'Fixa', 
+                            months 
+                        });
+                        botResponse.text = `🗓️ Agendado! "${desc}" de ${safeCurrency(amount)} será lançado nos próximos ${months} meses.`;
+                    } catch(e) { botResponse.text = "Erro ao agendar recorrência."; }
+                } else { botResponse.text = "Entendi a recorrência, mas qual o valor?"; }
             }
-            // 3. NLP: Correção
             else if ((lowerText.includes('corrigir') || lowerText.includes('corrija')) && lastActionId) {
                 const newValue = parseValue(text);
                 if (!isNaN(newValue) && newValue > 0) {
                     try { await onUpdateTransaction(lastActionId, { amount: newValue }); botResponse.text = `✅ Corrigido! Valor: ${safeCurrency(newValue)}.`; } catch (e) { botResponse.text = "Erro ao corrigir."; }
                 } else { botResponse.text = "Diga o valor correto. Ex: '1500'"; }
             } 
-            // 4. NLP: Exclusão
-            else if ((lowerText.includes('apagar') || lowerText.includes('cancelar')) && lowerText.includes('ultimo')) {
-                if (lastActionId) { try { await onDeleteTransaction(lastActionId); setLastActionId(null); botResponse.text = "🗑️ Último lançamento apagado."; } catch (e) { botResponse.text = "❌ Erro ao apagar."; } } else { botResponse.text = "Nada recente para apagar."; }
-            } 
-            // 5. NLP: Resumo
+            else if (lowerText.includes('apagar') && lowerText.includes('ultimo')) {
+                if (lastActionId) {
+                    try { await onDeleteTransaction(lastActionId); setLastActionId(null); botResponse.text = "🗑️ Último lançamento apagado."; } catch(e) { botResponse.text = "Erro ao apagar."; }
+                } else { botResponse.text = "Nada recente para apagar."; }
+            }
             else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
                 const fins = calculateFinancials(transactions, companyType);
                 botResponse.text = `📊 *Resumo*\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo: ${safeCurrency(fins.fluxoCaixa)}`;
             } 
-            // 6. NLP: Transação Padrão (Receita/Despesa)
             else {
                 const amount = parseValue(text);
                 if (!isNaN(amount) && amount > 0) {
                     let type = ''; let typeLabel = '';
-                    
-                    // Detecção Inteligente de Subcategorias
-                    let guessedSubcat = '';
-                    if (lowerText.includes('condominio') || lowerText.includes('aluguel')) guessedSubcat = companyType === 'personal' ? 'Moradia' : 'Aluguel';
-                    if (lowerText.includes('luz') || lowerText.includes('energia')) guessedSubcat = companyType === 'personal' ? 'Moradia' : 'Energia/Água';
-                    if (lowerText.includes('mercado') || lowerText.includes('comida')) guessedSubcat = companyType === 'personal' ? 'Alimentação' : 'Despesa Operacional';
-
-                    if (incomeKeywords.some(w => lowerText.includes(w))) { 
-                        type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA; 
-                        typeLabel = 'Receita'; 
-                    }
-                    else if (expenseKeywords.some(w => lowerText.includes(w))) { 
+                    if (['recebi', 'ganhei', 'venda', 'entrada', 'receita'].some(w => lowerText.includes(w))) {
+                        type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA; typeLabel = 'Receita';
+                    } else {
                         typeLabel = 'Despesa'; 
-                        type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
-                        // Refinamento
-                        if (guessedSubcat === 'Moradia') type = TransactionTypePersonal.MORADIA;
-                    }
-                    
-                    // Fallback: Se tem valor mas não disse o que é, assume Despesa se for pequeno ou Receita se for grande? Melhor perguntar.
-                    // Mas o usuário pediu para ser esperto. Vamos assumir Despesa por padrão se não tiver keyword de receita.
-                    if (!type) {
-                         type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
-                         typeLabel = 'Despesa (Estimada)';
+                        type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; // Default
                     }
 
-                    if (type) {
-                        const desc = text.replace(/[0-9.,]+/, '').replace(new RegExp(`(${[...incomeKeywords, ...expenseKeywords, 'R\\$', 'reais'].join('|')})`, 'gi'), '').trim();
-                        try { 
-                            const newId = await onAddTransaction({ 
-                                desc: desc || 'Via Chat', 
-                                amount, 
-                                type, 
-                                subcategory: guessedSubcat, 
-                                date: new Date() 
-                            }); 
-                            setLastActionId(newId); 
-                            botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`; 
-                        } catch (e) { botResponse.text = "Erro ao salvar."; }
-                    }
-                } else { botResponse.text = "Não entendi o valor. Tente 'Gastei 50'."; }
+                    const desc = text.replace(/[0-9.,]+/, '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$|reais)/gi, '').trim();
+                    try {
+                        const newId = await onAddTransaction({ desc: desc || 'Via Chat', amount, type, subcategory: '', date: new Date() });
+                        setLastActionId(newId);
+                        botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`;
+                    } catch(e) { botResponse.text = "Erro ao salvar."; }
+                } else {
+                    botResponse.text = "Não entendi. Tente 'Gastei 50 no almoço' ou 'Investi 1000 no CDB'.";
+                }
             }
             setMessages(prev => [...prev, botResponse]);
         }, 500);
@@ -418,6 +384,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
             e.preventDefault(); 
         } 
     }
+    
     if (!isOpen) return null;
     return (
         <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 animate-fade-in-up h-[450px]">
@@ -428,14 +395,29 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
     );
 };
 
-// ... DRE VIEW ...
+const CalculatorModal=({onClose,onConfirm})=>{const [e,setE]=useState('');const h=(v)=>{if(v==='C')setE('');else if(v==='='){try{setE(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))))}catch{setE('Erro')}}else setE(p=>p+v)};const c=()=>{try{onConfirm(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))).replace('.',','))}catch{}};const b=['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm"><div className="flex justify-between mb-4"><h3 className="font-bold dark:text-white">Calculadora</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-4 rounded mb-4 text-right font-bold dark:text-white text-2xl">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{b.map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded font-bold dark:text-white">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-slate-200 p-3 rounded">=</button></div><button onClick={c} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">USAR</button></div></div>)};
+const RepeatModal=({onClose,onConfirm,transaction})=>{const [c,setC]=useState(1);return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full"><h3 className="font-bold mb-4 dark:text-white">Repetir</h3><input type="number" value={c} onChange={e=>setC(e.target.value)} className="w-full p-2 border rounded mb-4 dark:bg-slate-900 dark:text-white"/><button onClick={()=>onConfirm(c)} className="w-full bg-indigo-600 text-white p-2 rounded">Confirmar</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Cancelar</button></div></div>)};
+const ExportModal=({onClose,csvContent,fileName})=>{const [c,setC]=useState(false);const r=useRef(null);const h=()=>{if(r.current){r.current.select();document.execCommand('copy');setC(true)}};return(<div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"><div className="bg-white p-6 rounded-xl max-w-lg w-full"><h3 className="font-bold text-lg mb-2">Exportar CSV</h3><textarea ref={r} readOnly value={csvContent} className="w-full h-32 p-2 border rounded mb-4 text-xs font-mono"/><button onClick={h} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">{c?'Copiado!':'Copiar'}</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Fechar</button></div></div>)};
+const PrintLayout=({companyName,periodStr,onClose,children})=>{return(<div className="fixed inset-0 bg-white z-[70] overflow-y-auto text-black"><div className="sticky top-0 bg-slate-800 text-white p-4 flex justify-between print:hidden"><div><h2 className="font-bold">Modo Impressão</h2></div><div className="flex gap-2"><button onClick={()=>window.print()} className="bg-indigo-600 px-4 py-1 rounded">Imprimir</button><button onClick={onClose} className="bg-slate-600 px-4 py-1 rounded">Fechar</button></div></div><div className="max-w-[210mm] mx-auto p-[10mm]"><div className="text-center border-b-2 border-black pb-4 mb-6"><h1 className="text-2xl font-bold uppercase">{companyName}</h1><h2>Relatório Financeiro</h2><p>{periodStr}</p></div>{children}</div></div>)};
+const InstallGuideModal=({onClose})=>{return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl p-6 max-w-sm text-center"><h2 className="font-bold text-xl mb-2">Instalar</h2><p className="mb-4">Abra no Chrome/Safari e use "Adicionar à Tela Inicial".</p><button onClick={onClose} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">Ok</button></div></div>)};
+const TutorialModal=({onClose})=>{return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl p-6 max-w-md text-center"><h2 className="font-bold text-xl mb-2">Bem-vindo!</h2><p className="mb-6">Seu gestor financeiro completo.</p><button onClick={onClose} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">Começar</button></div></div>)};
+
+const Sidebar = ({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onOpenSettings, onOpenInstall, onRenameCompany }) => {
+    const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false); const [editingId, setEditingId] = useState(null); const [editName, setEditName] = useState(''); const [newType, setNewType] = useState('business');
+    const handleCreate = () => { if(newName.trim()) { onAddCompany(newName, newType); setNewName(''); setIsCreating(false); onClose(); } };
+    const handleStartEdit = (e,c) => { e.stopPropagation(); setEditingId(c.id); setEditName(c.name); };
+    const handleSaveEdit = (e) => { e.stopPropagation(); if(editName.trim()){ onRenameCompany(editingId, editName); setEditingId(null); } };
+    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} print:hidden`}> <div className="p-6 border-b dark:border-slate-700 flex justify-between"><h2 className="font-bold text-xl dark:text-white">Minhas Contas</h2><button onClick={onClose}><LucideX/></button></div> <div className="p-4"> {companies.map(c => (<div key={c.id} onClick={() => { if(editingId!==c.id){onChangeCompany(c); onClose();} }} className={`w-full text-left p-3 rounded-xl mb-2 flex items-center gap-2 cursor-pointer ${currentCompany?.id === c.id ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 dark:text-white dark:hover:bg-slate-800'}`}>{editingId === c.id ? (<><input autoFocus className="flex-1 p-1 border rounded" value={editName} onChange={e=>setEditName(e.target.value)} onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Enter')handleSaveEdit(e)}} /><button onClick={handleSaveEdit}><LucideCheck size={14}/></button></>) : (<><span className="flex-1">{c.name}</span><button onClick={e=>{e.stopPropagation(); setEditingId(c.id); setEditName(c.name)}} className="text-slate-400 hover:text-indigo-500"><LucideEdit2 size={14}/></button></>)}</div>))} <button onClick={() => setIsCreating(true)} className="w-full p-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600"><LucidePlus/> Nova Conta</button> {isCreating && (<div className="mt-4 bg-slate-50 p-3 rounded"><input autoFocus placeholder="Nome" className="w-full p-2 border rounded mb-2 dark:bg-slate-800 dark:text-white" value={newName} onChange={e => setNewName(e.target.value)} /><div className="flex gap-2 mb-2"><button onClick={()=>setNewType('business')} className={`flex-1 text-xs p-1 rounded border ${newType==='business'?'bg-blue-100 border-blue-500':'bg-white'}`}>Empresa</button><button onClick={()=>setNewType('personal')} className={`flex-1 text-xs p-1 rounded border ${newType==='personal'?'bg-green-100 border-green-500':'bg-white'}`}>Pessoal</button></div><button onClick={handleCreate} className="w-full bg-indigo-600 text-white p-2 rounded">Criar</button></div>)} <div className="mt-8 pt-4 border-t dark:border-slate-700"><button onClick={onOpenSettings} className="w-full p-3 flex items-center gap-3 text-slate-600 dark:text-slate-400"><LucideSettings/> Categorias</button></div> </div> </div> </>);
+};
+
+// --- APP PRINCIPAL ---
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
     
-    // SAFEGUARD: Se as categorias não carregarem, usa o padrão empresarial
     const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
-    
+    if (!cats) return null; // Segurança
+
     const real = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
     const meta = useMemo(() => isMonthly && budget ? budget : {}, [budget, isMonthly]);
     const toggleRow = (label) => setExpandedRows(prev => ({ ...prev, [label]: !prev[label] }));
@@ -449,13 +431,12 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
             const valMeta = budgetSubcats ? (budgetSubcats[`${type}:${subName}`] || 0) : 0;
             const finalReal = isNegative ? -valReal : valReal;
             const displayReal = showPercentage ? safePercent(valReal, real.receita) : safeCurrency(finalReal);
-            const finalMeta = isNegative ? -valMeta : valMeta;
-            const variacao = finalReal - finalMeta;
+            const variacao = finalReal - (isNegative ? -valMeta : valMeta);
             return (
                 <div key={subName} className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-2 px-4 border-b border-gray-200 text-xs ${isPrintMode ? 'text-black' : 'text-gray-600 dark:text-slate-300 bg-gray-50/50 dark:bg-slate-900/50'}`}>
                     <span className={`${isPrintMode ? 'text-black' : 'text-gray-500 dark:text-slate-400'} pl-6 flex items-center`}>• {subName}</span>
                     <span className={`text-right ${isPrintMode ? 'text-black' : ''}`}>{displayReal}</span>
-                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600 dark:text-green-400') : (isPrintMode ? 'text-black' : 'text-red-500 dark:text-red-400')}`}>{valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
+                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600') : (isPrintMode ? 'text-black' : 'text-red-500')}`}>{valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
                 </div>
             );
         });
@@ -463,39 +444,34 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
 
     const LineItem = ({ label, type, valReal, valMeta, isNegative, isTotal, highlight, canExpand }) => {
         const finalReal = isNegative ? -valReal : valReal;
-        const finalMeta = isNegative ? -(valMeta || 0) : (valMeta || 0);
-        const variacao = finalReal - finalMeta;
         let displayReal = showPercentage ? safePercent(valReal, real.receita) : safeCurrency(finalReal);
         if (showPercentage && isNegative) displayReal = '-' + displayReal;
         let textColor = isPrintMode ? 'text-black' : 'text-gray-700 dark:text-slate-200';
         if (!isPrintMode) {
-            if (highlight) textColor = finalReal >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400';
-            if (isNegative && !highlight && !showPercentage) textColor = 'text-red-600 dark:text-red-400';
+            if (highlight) textColor = finalReal >= 0 ? 'text-green-700' : 'text-red-700';
+            if (isNegative && !highlight && !showPercentage) textColor = 'text-red-600';
         }
         return (
             <>
-                <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-3 px-4 border-b border-gray-200 dark:border-slate-800 items-center ${isTotal ? (isPrintMode ? 'bg-gray-100 font-bold' : 'bg-gray-50 dark:bg-slate-800/50 font-bold') : ''} ${canExpand && !isPrintMode ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors' : ''}`} onClick={() => canExpand && !isPrintMode && toggleRow(label)}>
-                    <span className={`${isTotal ? 'text-black dark:text-white' : 'text-gray-600 dark:text-slate-300'} ${isPrintMode ? 'text-black' : ''} flex items-center gap-1`}>{canExpand && !isPrintMode && (expandedRows[label] ? <LucideChevronDown size={14} /> : <LucideChevronRight size={14} />)}{label}</span>
+                <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-3 px-4 border-b border-gray-200 dark:border-slate-800 items-center ${isTotal ? 'font-bold bg-gray-50 dark:bg-slate-800/50' : ''} ${canExpand ? 'cursor-pointer hover:bg-gray-50' : ''}`} onClick={() => canExpand && toggleRow(label)}>
+                    <span className={`flex items-center gap-1 ${isTotal ? 'text-slate-900 dark:text-white' : 'text-gray-600 dark:text-slate-300'}`}>{canExpand && (expandedRows[label] ? <LucideChevronDown size={14} /> : <LucideChevronRight size={14} />)}{label}</span>
                     <span className={`text-right ${textColor} ${isTotal ? 'text-base' : 'text-sm'}`}>{displayReal}</span>
-                    {isMonthly && !showPercentage && <span className={`text-right text-xs font-medium ${isPrintMode ? 'text-black' : ((isNegative ? variacao <= 0 : variacao >= 0) ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400')}`}>{valMeta ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
+                    {isMonthly && !showPercentage && <span className="text-right text-xs font-medium text-slate-500">-</span>}
                 </div>
-                {(canExpand && (expandedRows[label] || isPrintMode)) && <SubcatRows type={type} subcatTotals={real.subcatTotals} budgetSubcats={meta.subcategories} isNegative={isNegative} />}
+                {(canExpand && expandedRows[label]) && <SubcatRows type={type} subcatTotals={real.subcatTotals} budgetSubcats={meta.subcategories} isNegative={isNegative} />}
             </>
         );
     };
 
     return (
-        <div className={`${isPrintMode ? 'border-none' : 'bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden relative'}`}>
-            {!isPrintMode && (<div className="absolute top-2 right-2"><button onClick={() => setShowPercentage(!showPercentage)} className={`p-1.5 rounded-md transition-colors flex items-center gap-1 text-xs font-medium ${showPercentage ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'}`} title="Alternar R$ / %"><LucidePercent size={14} />{showPercentage ? 'R$' : '%'}</button></div>)}
-            <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} ${isPrintMode ? 'bg-gray-200 text-black border-b border-gray-300' : 'bg-gray-100 dark:bg-slate-900 text-gray-500 dark:text-slate-400'} text-xs font-bold uppercase py-3 px-4`}><div>Descrição</div><div className="text-right">{showPercentage ? 'Análise (%)' : 'Realizado (R$)'}</div>{isMonthly && !showPercentage && <div className="text-right">Variação</div>}</div>
+        <div className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden relative ${isPrintMode ? 'border-none' : ''}`}>
+            {!isPrintMode && <div className="absolute top-2 right-2"><button onClick={() => setShowPercentage(!showPercentage)} className="p-1.5 rounded-md bg-gray-100 dark:bg-slate-700"><LucidePercent size={14}/></button></div>}
+            <div className="grid grid-cols-3 bg-gray-100 dark:bg-slate-900 text-xs font-bold uppercase py-3 px-4"><div>Descrição</div><div className="text-right">{showPercentage ? '%' : 'R$'}</div><div className="text-right">Meta</div></div>
             
-            {/* RENDERIZAÇÃO CONDICIONAL BASEADA NO TIPO DE EMPRESA */}
             {companyType === 'personal' ? (
                 <div>
                     <LineItem label="Renda Total" type={TransactionTypePersonal.RECEITA} valReal={real[TransactionTypePersonal.RECEITA]} valMeta={meta[TransactionTypePersonal.RECEITA]} canExpand />
-                    {cats.filter(c => !c.isPositive).map(cat => (
-                        <LineItem key={cat.value} label={`(-) ${cat.label.replace(' (-)', '')}`} type={cat.value} valReal={real[cat.value]} valMeta={meta[cat.value]} isNegative canExpand />
-                    ))}
+                    {cats.filter(c => !c.isPositive).map(cat => <LineItem key={cat.value} label={`(-) ${cat.label.replace(' (-)', '')}`} type={cat.value} valReal={real[cat.value]} valMeta={meta[cat.value]} isNegative canExpand />)}
                     <LineItem label="= SALDO FINAL" valReal={real.fluxoCaixa} isTotal highlight />
                 </div>
             ) : (
@@ -511,292 +487,6 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
                 </div>
             )}
         </div>
-    );
-};
-
-const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, companyType }) => {
-    const [localBudget, setLocalBudget] = useState({});
-    const [localSubBudget, setLocalSubBudget] = useState({});
-    
-    // SAFEGUARD
-    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
-
-    useEffect(() => {
-        setLocalBudget(budget || {});
-        setLocalSubBudget(budget?.subcategories || {});
-    }, [budget]);
-
-    if (!isMonthly) return <div className="p-8 text-center text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700">Selecione um mês específico para planejar o orçamento.</div>;
-
-    const handleMainChange = (type, value) => {
-        setLocalBudget(prev => ({ ...prev, [type]: parseFloat(value) || 0 }));
-    };
-
-    const handleSubChange = (type, subName, value) => {
-        const key = `${type}:${subName}`; const numVal = parseFloat(value) || 0;
-        setLocalSubBudget(prev => {
-            const newSubs = { ...prev, [key]: numVal };
-            const currentTypeSubs = Object.entries(newSubs).filter(([k]) => k.startsWith(type + ':')).reduce((sum, [, val]) => sum + val, 0);
-            setLocalBudget(prevMain => ({ ...prevMain, [type]: currentTypeSubs }));
-            return newSubs;
-        });
-    };
-
-    const handleSave = () => {
-        onSaveBudget({ ...localBudget, subcategories: localSubBudget });
-    };
-
-    return (
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><LucideTarget className="text-indigo-600 dark:text-indigo-400" /> Planejamento {companyType === 'personal' ? 'Pessoal' : 'Empresarial'}</h2>
-            <div className="space-y-8">
-                {cats.map(cat => (
-                    <div key={cat.value} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-700 break-inside-avoid">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className={`font-bold text-sm uppercase ${cat.color.split(' ')[0]}`}>{cat.label}</h3>
-                            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-40">
-                                <span className="pl-3 text-slate-400 text-sm">R$</span>
-                                <input type="number" value={localBudget[cat.value] || ''} onChange={e => handleMainChange(cat.value, e.target.value)} className="w-full p-2 text-right outline-none font-semibold text-slate-700 dark:text-slate-200 bg-transparent" placeholder="0,00" />
-                            </div>
-                        </div>
-                        {subcategories[cat.value]?.length > 0 && (
-                            <div className="pl-4 space-y-2 border-l-2 border-slate-200 dark:border-slate-700 ml-2">
-                                {subcategories[cat.value].map(sub => (
-                                    <div key={sub.id} className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-600 dark:text-slate-400">{sub.name}</span>
-                                        <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-32 h-8">
-                                            <span className="pl-2 text-slate-400 text-xs">R$</span>
-                                            <input type="number" value={localSubBudget[`${cat.value}:${sub.name}`] || ''} onChange={e => handleSubChange(cat.value, sub.name, e.target.value)} className="w-full p-1 text-right outline-none text-sm text-slate-600 dark:text-slate-300 bg-transparent" placeholder="0,00" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
-            <button onClick={handleSave} className="w-full mt-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">SALVAR METAS</button>
-        </div>
-    );
-};
-
-const CashFlowView = ({ transactions, isPrintMode, companyType }) => {
-    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
-    if (isPrintMode) {
-        return (
-            <div className="grid grid-cols-3 gap-4 border border-gray-300 p-4 text-center">
-                <div><h3 className="text-xs font-bold uppercase mb-1">Entradas</h3><p className="text-xl font-bold">{safeCurrency(receita)}</p></div>
-                <div><h3 className="text-xs font-bold uppercase mb-1">Saídas</h3><p className="text-xl font-bold">{safeCurrency(totalSaidas)}</p></div>
-                <div><h3 className="text-xs font-bold uppercase mb-1">Saldo</h3><p className="text-xl font-bold">{safeCurrency(fluxoCaixa)}</p></div>
-            </div>
-        );
-    }
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl border border-green-100 dark:border-green-900/30"><h3 className="text-green-800 dark:text-green-400 text-sm font-semibold uppercase mb-2">Entradas</h3><p className="text-3xl font-bold text-green-700 dark:text-green-400">{safeCurrency(receita)}</p></div>
-            <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl border border-red-100 dark:border-red-900/30"><h3 className="text-red-800 dark:text-red-400 text-sm font-semibold uppercase mb-2">Saídas</h3><p className="text-3xl font-bold text-red-700 dark:text-red-400">{safeCurrency(totalSaidas)}</p></div>
-            <div className={`p-6 rounded-xl border ${fluxoCaixa >= 0 ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-900/30' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30'}`}><h3 className={`${fluxoCaixa >= 0 ? 'text-indigo-800 dark:text-indigo-300' : 'text-orange-800 dark:text-orange-300'} text-sm font-semibold uppercase mb-2`}>Saldo do Período</h3><p className={`text-3xl font-black ${fluxoCaixa >= 0 ? 'text-indigo-900 dark:text-indigo-200' : 'text-orange-700 dark:text-orange-300'}`}>{safeCurrency(fluxoCaixa)}</p></div>
-        </div>
-    );
-};
-
-const ChartsView = ({ allTransactions, companyType }) => {
-    const lineData = useMemo(() => {
-        if (!allTransactions || allTransactions.length === 0) return [];
-        const groups = {};
-        allTransactions.forEach(t => {
-            if (!t.createdAt || typeof t.createdAt.toDate !== 'function') return;
-            const d = t.createdAt.toDate();
-            const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(t);
-        });
-        return Object.keys(groups).map(key => {
-            const [yearStr, monthStr] = key.split('-');
-            const fins = calculateFinancials(groups[key], companyType);
-            return { name: `${MONTHS[parseInt(monthStr)]}/${yearStr.slice(2)}`, Lucro: fins.fluxoCaixa, Receita: fins.receita, year: parseInt(yearStr), month: parseInt(monthStr) };
-        }).sort((a, b) => a.year - b.year || a.month - b.month).slice(-12);
-    }, [allTransactions, companyType]);
-
-    if (lineData.length === 0) return <div className="p-8 text-center text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-800/50 rounded-xl">Sem dados suficientes para o gráfico.</div>;
-    return (
-        <div className="h-80 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700">
-            <ResponsiveContainer width="100%" height="100%"><LineChart data={lineData}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} /><YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v/1000}k`} /><Tooltip formatter={(value) => safeCurrency(value)} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} /><Legend /><Line type="monotone" dataKey="Receita" stroke="#10b981" strokeWidth={2} dot={false} name="Entradas" /><Line type="monotone" dataKey="Lucro" stroke="#4f46e5" strokeWidth={3} name="Saldo" /></LineChart></ResponsiveContainer>
-        </div>
-    );
-};
-
-const CategoryPieChart = ({ transactions, type }) => {
-    const data = useMemo(() => {
-        const filtered = transactions.filter(t => t.type === type);
-        const groups = {};
-        filtered.forEach(t => {
-            const cat = t.subcategory || 'Outros';
-            groups[cat] = (groups[cat] || 0) + Number(t.amount);
-        });
-        return Object.entries(groups).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
-    }, [transactions, type]);
-
-    if (data.length === 0) return <div className="h-64 flex items-center justify-center text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-800/50 rounded-xl">Sem dados de {type}.</div>;
-
-    return (
-        <div className="h-96 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 flex flex-col">
-            <h3 className="text-sm font-bold text-gray-700 dark:text-slate-200 mb-4 text-center">{type} por Subcategoria</h3>
-            <div className="flex-1 flex justify-center items-center relative">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie 
-                            data={data} 
-                            cx="50%" 
-                            cy="50%" 
-                            innerRadius={50} 
-                            outerRadius={70} 
-                            paddingAngle={3} 
-                            dataKey="value" 
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            labelLine={true}
-                        >
-                            {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip formatter={(value) => safeCurrency(value)} />
-                        <Legend verticalAlign="bottom" height={36} />
-                    </PieChart>
-                </ResponsiveContainer>
-            </div>
-        </div>
-    );
-};
-
-const CalculatorModal = ({ onClose, onConfirm }) => {
-    const [expression, setExpression] = useState('');
-    const handleBtnClick = (val) => { if (val === 'C') { setExpression(''); } else if (val === '=') { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); const result = eval(sanitized); setExpression(String(result)); } catch (e) { setExpression('Erro'); setTimeout(() => setExpression(''), 1000); } } else { setExpression(prev => prev + val); } };
-    const handleConfirm = () => { let finalVal = expression; if (/[+\-x÷]/.test(expression)) { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); finalVal = String(eval(sanitized)); } catch (e) { return; } } onConfirm(finalVal.replace('.', ',')); };
-    const btns = ['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];
-    return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden" style={{zIndex: 9999}}>
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6">
-                <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">Calculadora</h3><button onClick={onClose}><LucideX className="text-slate-400 hover:text-slate-600" /></button></div>
-                <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl mb-4 text-right text-2xl font-mono font-bold text-slate-800 dark:text-white overflow-x-auto">{expression || '0'}</div>
-                <div className="grid grid-cols-4 gap-2 mb-4">{btns.map(b => (<button key={b} onClick={() => handleBtnClick(b)} className={`p-4 rounded-xl font-bold text-lg transition-colors ${['C'].includes(b) ? 'bg-red-100 text-red-600 hover:bg-red-200' : ['÷','x','-','+'].includes(b) ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{b}</button>))}<button onClick={() => handleBtnClick('=')} className="col-span-4 bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-white p-3 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-500">=</button></div>
-                <button onClick={handleConfirm} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">USAR ESTE VALOR</button>
-            </div>
-        </div>
-    );
-};
-
-const ExportModal = ({ onClose, csvContent, fileName }) => {
-    const [copied, setCopied] = useState(false);
-    const textAreaRef = useRef(null);
-    useEffect(() => { if (textAreaRef.current) textAreaRef.current.select(); }, []);
-    const handleCopy = () => { if (textAreaRef.current) { textAreaRef.current.select(); document.execCommand('copy'); setCopied(true); setTimeout(() => setCopied(false), 2000); } };
-    return (
-        <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 flex flex-col space-y-4">
-                <div className="flex justify-between items-center"><h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2"><LucideDownload size={20} className="text-indigo-600 dark:text-indigo-400" /> Exportar Dados (CSV)</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><LucideX size={24} /></button></div>
-                <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-xs border border-amber-200"><strong>Atenção:</strong> Devido a bloqueios de segurança do navegador, o download automático pode não ocorrer. Use o botão abaixo para copiar os dados.</div>
-                <p className="text-sm text-slate-600 dark:text-slate-300">1. Clique em <strong>Copiar Dados</strong>.<br/>2. Abra o Excel ou Planilhas Google.<br/>3. Cole (Ctrl+V).</p>
-                <textarea ref={textAreaRef} readOnly value={csvContent} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-mono outline-none focus:border-indigo-500 resize-none dark:text-slate-300" />
-                <button onClick={handleCopy} className={`w-full py-4 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 text-lg shadow-lg ${copied ? 'bg-green-600 scale-105' : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105'}`}>{copied ? <><LucideCheckCircle size={24} /> DADOS COPIADOS!</> : <><LucideCopy size={24} /> COPIAR DADOS AGORA</>}</button>
-            </div>
-        </div>
-    );
-};
-
-const PrintLayout = ({ companyName, periodStr, onClose, children }) => {
-    const handlePrintNow = () => { window.print(); };
-    return (
-        <div className="fixed inset-0 bg-white z-[70] overflow-y-auto text-black animate-fade-in">
-            <div className="sticky top-0 bg-slate-800 text-white p-4 flex justify-between items-center shadow-md print:hidden">
-                <div className="flex items-center gap-2"><LucidePrinter className="text-indigo-400" /><div><h2 className="font-bold">Modo de Impressão</h2><p className="text-xs text-slate-400">Se o botão não funcionar, use Ctrl+P</p></div></div>
-                <div className="flex gap-3"><button onClick={handlePrintNow} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2"><LucidePrinter size={16} /> Imprimir Agora</button><button onClick={onClose} className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2"><LucideX size={16} /> Fechar</button></div>
-            </div>
-            <div className="max-w-[210mm] mx-auto p-[10mm] min-h-screen shadow-2xl my-8 print:shadow-none print:m-0 print:p-0 print:w-full">
-                <div className="text-center border-b-2 border-black pb-4 mb-6"><h1 className="text-2xl font-bold uppercase tracking-wide">{companyName || 'Minha Empresa'}</h1><h2 className="text-lg mt-1">Relatório Financeiro</h2><p className="text-sm text-gray-600 mt-1">{periodStr}</p></div>
-                <div className="print-content">{children}</div>
-                <div className="mt-12 pt-4 border-t border-gray-300 text-center text-xs text-gray-400">Gerado via App de Gestão Financeira em {new Date().toLocaleDateString()}</div>
-            </div>
-        </div>
-    );
-};
-
-const RepeatModal = ({ onClose, onConfirm, transaction }) => {
-    const [repeatCount, setRepeatCount] = useState(1);
-    return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6">
-                <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2"><LucideRepeat className="text-indigo-600 dark:text-indigo-400" /> Repetir Lançamento</h3><button onClick={onClose}><LucideX className="text-slate-400 hover:text-slate-600" /></button></div>
-                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl mb-4 border border-slate-100 dark:border-slate-700"><p className="font-bold text-sm text-slate-700 dark:text-slate-200">{transaction.desc}</p><p className="text-xs text-slate-500 dark:text-slate-400">{safeCurrency(transaction.amount)} • {transaction.type}</p></div>
-                <div className="mb-6"><label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">Repetir por quantos meses?</label><div className="flex items-center gap-3"><button onClick={() => setRepeatCount(Math.max(1, repeatCount - 1))} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg font-bold text-slate-600 dark:text-slate-300">-</button><input type="number" value={repeatCount} onChange={(e) => setRepeatCount(Math.max(1, parseInt(e.target.value) || 1))} className="w-full text-center p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold dark:text-white" /><button onClick={() => setRepeatCount(repeatCount + 1)} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg font-bold text-slate-600 dark:text-slate-300">+</button></div></div>
-                <button onClick={() => onConfirm(repeatCount)} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">Confirmar</button>
-            </div>
-        </div>
-    );
-};
-
-const InstallGuideModal = ({ onClose }) => {
-    return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
-                <div className="flex justify-end mb-2"><button onClick={onClose}><LucideX className="text-slate-400" /></button></div>
-                <div className="mb-4 flex justify-center"><div className="bg-indigo-100 dark:bg-indigo-900/30 p-4 rounded-full"><LucideRocket size={48} className="text-indigo-600 dark:text-indigo-400" /></div></div>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Pronto para o Mundo Real?</h2>
-                <p className="text-slate-600 dark:text-slate-300 text-sm mb-6">Você está usando um <strong>ambiente de prévia</strong>. O link deste app é temporário.</p>
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl mb-4 text-left text-xs text-amber-800 dark:text-amber-300"><p className="font-bold flex items-center gap-1 mb-2 text-sm"><LucideInfo size={14} /> Como instalar de verdade?</p><p className="mb-2">Para ter um link permanente, você precisa hospedar este código.</p></div>
-                <button onClick={onClose} className="mt-4 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">Entendi</button>
-            </div>
-        </div>
-    );
-};
-
-const TutorialModal = ({ onClose }) => {
-    const steps = [{ title: "Bem-vindo ao seu Gestor Financeiro!", desc: "Vamos dar uma volta rápida para você dominar suas finanças.", icon: <LucideInfo size={48} className="text-indigo-500" /> }, { title: "1. Menu Lateral", desc: "Toque no menu (canto superior esquerdo) para trocar de empresa ou configurar categorias.", icon: <LucideMenu size={48} className="text-slate-800" /> }, { title: "2. Lançamentos", desc: "Na aba 'LANÇAMENTOS', registre tudo. Use datas passadas para histórico.", icon: <LucidePlus size={48} className="text-green-500" /> }, { title: "3. Planejamento", desc: "Defina metas na aba 'PLANEJAMENTO'.", icon: <LucideTarget size={48} className="text-amber-500" /> }, { title: "4. Resultados", desc: "DRE, Fluxo e Gráficos automáticos.", icon: <LucidePieChart size={48} className="text-purple-500" /> }];
-    const [currentStep, setCurrentStep] = useState(0);
-    return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-8 flex flex-col items-center text-center space-y-6">
-                <div className="bg-slate-50 dark:bg-slate-700 p-6 rounded-full">{steps[currentStep].icon}</div>
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{steps[currentStep].title}</h2>
-                <p className="text-slate-600 dark:text-slate-300 text-lg">{steps[currentStep].desc}</p>
-                <div className="flex gap-2 mt-4">{steps.map((_, i) => (<div key={i} className={`h-2 w-2 rounded-full transition-all ${i === currentStep ? 'bg-indigo-600 w-6' : 'bg-slate-300 dark:bg-slate-600'}`} />))}</div>
-                <button onClick={() => { if (currentStep < steps.length - 1) setCurrentStep(currentStep + 1); else onClose(); }} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-lg transition-colors">{currentStep < steps.length - 1 ? 'Próximo' : 'Começar a Usar!'}</button>
-            </div>
-        </div>
-    );
-};
-
-const Sidebar = ({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onOpenSettings, onOpenInstall, onRenameCompany }) => {
-    const [isCreating, setIsCreating] = useState(false);
-    const [newName, setNewName] = useState('');
-    const [editingId, setEditingId] = useState(null);
-    const [editName, setEditName] = useState('');
-    const [newCompanyType, setNewCompanyType] = useState('business');
-
-    const handleCreate = () => { if (newName.trim()) { onAddCompany(newName, newCompanyType); setNewName(''); setIsCreating(false); onClose(); } };
-    const handleStartEdit = (e, company) => { e.stopPropagation(); setEditingId(company.id); setEditName(company.name); };
-    const handleSaveEdit = (e) => { e.stopPropagation(); if (editName.trim()) { onRenameCompany(editingId, editName); setEditingId(null); } };
-
-    return (
-        <>
-            {isOpen && <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm print:hidden" onClick={onClose} />}
-            <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} print:hidden`}>
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center"><h2 className="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2"><LucideBuilding2 className="text-indigo-600 dark:text-indigo-400" /> Minhas Contas</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><LucideX size={24} /></button></div>
-                <div className="p-4 overflow-y-auto h-[calc(100%-80px)] flex flex-col">
-                    <div className="space-y-2 mb-6">
-                        {companies.map(c => (
-                            <div key={c.id} onClick={() => { if (editingId !== c.id) { onChangeCompany(c); onClose(); } }} className={`w-full text-left p-3 rounded-xl flex items-center gap-3 transition-colors cursor-pointer group ${currentCompany?.id === c.id ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-100 dark:border-indigo-800' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${c.type === 'personal' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{c.type === 'personal' ? <LucideUser size={16}/> : <LucideBriefcase size={16}/>}</div>
-                                {editingId === c.id ? (<div className="flex-1 flex items-center gap-2"><input autoFocus className="w-full p-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-600 rounded text-sm outline-none" value={editName} onChange={(e) => setEditName(e.target.value)} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(e); }} /><button onClick={handleSaveEdit} className="p-1 bg-green-100 dark:bg-green-900/50 text-green-600 rounded hover:bg-green-200"><LucideCheck size={14} /></button><button onClick={(e) => { e.stopPropagation(); setEditingId(null); }} className="p-1 bg-red-100 dark:bg-red-900/50 text-red-600 rounded hover:bg-red-200"><LucideX size={14} /></button></div>) : (<><span className="flex-1 truncate text-sm">{c.name}</span><button onClick={(e) => handleStartEdit(e, c)} className="p-1.5 rounded-full text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 opacity-0 group-hover:opacity-100 transition-opacity" title="Renomear"><LucideEdit2 size={14} /></button></>)}
-                            </div>
-                        ))}
-                    </div>
-                    {!isCreating ? (<button onClick={() => setIsCreating(true)} className="w-full py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 font-semibold hover:border-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center justify-center gap-2"><LucidePlus size={18} /> Nova Conta</button>) : (<div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 animate-fade-in"><input autoFocus placeholder="Nome" className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm mb-3 outline-none focus:border-indigo-500 bg-white dark:bg-slate-900 dark:text-white" value={newName} onChange={e => setNewName(e.target.value)} /><div className="flex gap-2 mb-3"><button onClick={() => setNewCompanyType('business')} className={`flex-1 py-1 text-xs font-bold rounded border ${newCompanyType === 'business' ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white border-slate-300 text-slate-500'}`}>Empresa</button><button onClick={() => setNewCompanyType('personal')} className={`flex-1 py-1 text-xs font-bold rounded border ${newCompanyType === 'personal' ? 'bg-green-100 border-green-500 text-green-700' : 'bg-white border-slate-300 text-slate-500'}`}>Pessoal</button></div><div className="flex gap-2"><button onClick={handleCreate} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold">Criar</button><button onClick={() => setIsCreating(false)} className="flex-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-2 rounded-lg text-sm font-bold">Cancelar</button></div></div>)}
-                    <div className="mt-auto border-t border-slate-100 dark:border-slate-800 pt-4 space-y-2">
-                        <button onClick={() => { onOpenSettings(); onClose(); }} className="w-full p-3 flex items-center gap-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors font-medium"><LucideSettings size={20} /> Configurar Categorias</button>
-                        <button onClick={() => { onOpenInstall(); onClose(); }} className="w-full p-3 flex items-center gap-3 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-colors font-medium"><LucideSmartphone size={20} /> Instalar App</button>
-                    </div>
-                </div>
-            </div>
-        </>
     );
 };
 
@@ -828,12 +518,11 @@ export default function App() {
     const [showCalculator, setShowCalculator] = useState(false);
     const [showChat, setShowChat] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-
+    
     // States for forms
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [repeatingTransaction, setRepeatingTransaction] = useState(null);
     const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
-    // Uso seguro da variável global
     const [formType, setFormType] = useState(transactionCategories[0].value);
     const [formSubcat, setFormSubcat] = useState('');
     const [formDesc, setFormDesc] = useState('');
@@ -845,42 +534,19 @@ export default function App() {
     const companyType = currentCompany?.type || 'business';
     const activeCategories = useMemo(() => companyType === 'personal' ? categoriesPersonal : categoriesBusiness, [companyType]);
 
+    // Initial Load
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { setDarkMode(true); }
-        const manifest = { "name": "Gestão Financeira", "short_name": "Finanças", "start_url": ".", "display": "standalone", "background_color": "#ffffff", "theme_color": "#4f46e5", "icons": [{ "src": "https://placehold.co/192x192/4f46e5/ffffff.png?text=$", "sizes": "192x192", "type": "image/png" }, { "src": "https://placehold.co/512x512/4f46e5/ffffff.png?text=$", "sizes": "512x512", "type": "image/png" }] };
-        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
-        const link = document.createElement('link'); link.rel = 'manifest'; link.href = URL.createObjectURL(manifestBlob); document.head.appendChild(link);
-        const handleBeforeInstallPrompt = (e) => { e.preventDefault(); setDeferredPrompt(e); };
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        const hasSeenTutorial = localStorage.getItem('hasSeenFinTutorial');
-        if (!hasSeenTutorial) setShowTutorial(true);
-        
-        if (Notification.permission === 'granted') setNotificationsEnabled(true);
-
-        if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey.startsWith('AIza')) { console.error("FIREBASE CONFIG NÃO ENCONTRADA OU INVÁLIDA"); return; }
+        if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey.startsWith('AIza')) { console.error("FIREBASE ERROR"); return; }
         const app = initializeApp(firebaseConfig);
-        const _auth = getAuth(app);
-        const _db = getFirestore(app);
-        setDb(_db);
+        const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
     }, []);
 
-    useEffect(() => {
-        if (darkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
-    }, [darkMode]);
-    
-    useEffect(() => {
-        if (notificationsEnabled) {
-            const lastAccess = localStorage.getItem('lastAccess');
-            const now = Date.now();
-            if (!lastAccess || now - lastAccess > 86400000) {
-                 new Notification("Gestão Financeira", { body: "Não se esqueça de lançar suas despesas hoje!", icon: "https://placehold.co/192x192/4f46e5/ffffff.png?text=$" });
-                 localStorage.setItem('lastAccess', now);
-            }
-        }
-    }, [notificationsEnabled]);
+    useEffect(() => { if (darkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); } }, [darkMode]);
 
+    // Data Loading
     useEffect(() => {
         if (!user || !db) return;
         const q = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies`), orderBy('createdAt', 'asc'));
@@ -896,12 +562,7 @@ export default function App() {
             }
             setLoading(false);
         });
-    }, [user, db]); 
-
-    const handleCompanyChange = (company) => {
-        setCurrentCompany(company);
-        localStorage.setItem('lastCompanyId', company.id);
-    };
+    }, [user, db]);
 
     useEffect(() => {
         if (!user || !db || !currentCompany) { setTransactions([]); setSubcategories({}); setAssets([]); return; }
@@ -922,11 +583,11 @@ export default function App() {
         getDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/budgets/${year}_${period}`)).then(snap => setBudget(snap.exists() ? snap.data() : {})).catch(err => console.error(err));
     }, [user, db, period, year, currentCompany]);
 
+    // Helpers
     const filteredData = useMemo(() => {
         return transactions.filter(t => {
-            if (!t.createdAt || typeof t.createdAt.toDate !== 'function') return false;
+            if (!t.createdAt) return false;
             const d = t.createdAt.toDate();
-            // Lógica "Todo o Período"
             if (period === 'ALL') return true; 
 
             if (d.getUTCFullYear() !== year) return false;
@@ -952,10 +613,32 @@ export default function App() {
         return filteredData.filter(t => t.desc.toLowerCase().includes(lowerTerm) || (t.subcategory && t.subcategory.toLowerCase().includes(lowerTerm)));
     }, [filteredData, searchTerm]);
 
+    const handleCompanyChange = (c) => { setCurrentCompany(c); localStorage.setItem('lastCompanyId', c.id); };
     const resetForm = () => { setEditingTransaction(null); setFormDate(new Date().toISOString().split('T')[0]); setFormType(activeCategories[0].value); setFormSubcat(''); setFormDesc(''); setFormAmount(''); setIsRecurring(false); setRecurringMonths(1); };
-    const handleEditClick = (t) => { setEditingTransaction(t); setFormDesc(t.desc); setFormAmount(t.amount.toString().replace('.', ',')); setFormType(t.type); setFormSubcat(t.subcategory || ''); if (t.createdAt) setFormDate(t.createdAt.toDate().toISOString().split('T')[0]); };
     
-    // --- FUNÇÕES DE CRUD (Chat e UI) ---
+    // --- FUNÇÕES DE CRUD DO APP ---
+    // Definição da função para adicionar recorrentes
+    const handleAddRecurringTransaction = async ({ desc, amount, type, subcategory, months }) => {
+        if (!user || !currentCompany) return;
+        const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
+        const batch = writeBatch(db);
+        const today = new Date();
+        
+        for (let i = 0; i < months; i++) {
+             const nextDate = new Date(today);
+             nextDate.setMonth(today.getMonth() + i);
+             const newDocRef = doc(collectionRef);
+             batch.set(newDocRef, { 
+                 desc: `${desc} (${i+1}/${months})`, 
+                 amount, 
+                 type, 
+                 subcategory: subcategory || '', 
+                 createdAt: Timestamp.fromDate(nextDate) 
+             });
+        }
+        await batch.commit();
+    };
+
     const handleAddTransaction = async ({ desc, amount, type, subcategory, date }) => {
         if (!currentCompany || !user) return;
         const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
@@ -975,14 +658,7 @@ export default function App() {
 
     const handleSaveTransaction = async (e) => { e.preventDefault(); if (!currentCompany) { alert("Selecione uma empresa."); return; } const val = parseFloat(formAmount.replace(',', '.')); const parts = formDate.split('-'); const selectedDate = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0)); if (!val || !user || isNaN(selectedDate.getTime())) return; try { const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`); const data = { desc: formDesc, amount: val, type: formType, subcategory: formSubcat, createdAt: Timestamp.fromDate(selectedDate) }; if (editingTransaction) { await updateDoc(doc(collectionRef, editingTransaction.id), { ...data, editedAt: Timestamp.now() }); } else { 
         if (isRecurring && recurringMonths > 1) {
-            const batch = writeBatch(db);
-            for (let i = 0; i < recurringMonths; i++) {
-                 const newDate = new Date(selectedDate);
-                 newDate.setUTCMonth(selectedDate.getUTCMonth() + i);
-                 const newDocRef = doc(collectionRef);
-                 batch.set(newDocRef, { ...data, createdAt: Timestamp.fromDate(newDate) });
-            }
-            await batch.commit();
+            await handleAddRecurringTransaction({ desc: formDesc, amount: val, type: formType, subcategory: formSubcat, months: recurringMonths });
         } else {
             await addDoc(collectionRef, data); 
         }
@@ -1060,6 +736,7 @@ export default function App() {
                             isOpen={true} 
                             onClose={() => setShowChat(false)} 
                             onAddTransaction={handleAddTransaction}
+                            onAddRecurringTransaction={handleAddRecurringTransaction}
                             onAddAsset={handleAddAsset}
                             onUpdateTransaction={handleUpdateTransaction}
                             onDeleteTransaction={handleDeleteTransaction}
@@ -1109,7 +786,7 @@ export default function App() {
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun/> : <LucideMoon/>}</button>
-                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={period} onChange={e => setPeriod(parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
                     <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
                     <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
                     <button onClick={handleExportCSV} className="p-2 text-indigo-600"><LucideDownload/></button>
@@ -1121,7 +798,7 @@ export default function App() {
                 <div className="flex overflow-x-auto gap-2 mb-6 pb-2">
                     {['lancamentos', 'planejamento', 'patrimonio', 'resultados'].map(t => (
                         <button key={t} onClick={() => setMainTab(t)} className={`px-4 py-2 rounded-lg font-bold whitespace-nowrap ${mainTab === t ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                            {t === 'lancamentos' ? 'LANÇAMENTOS' : t === 'planejamento' ? 'PLANEJAMENTO' : t === 'patrimonio' ? 'PATRIMÔNIO' : 'RESULTADOS'}
                         </button>
                     ))}
                 </div>
