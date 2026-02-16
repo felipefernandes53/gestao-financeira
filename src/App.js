@@ -693,9 +693,9 @@ function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
         { title: "BEM-VINDO!", desc: "O seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
+        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registrar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
         { title: "ASSISTENTE IA", desc: "Dê ordens por texto ou voz ao Assistente IA. Ele entende recorrências e patrimônios automaticamente.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
-        { title: "PATRIMÔNIO", desc: "Registe bens e investimentos. O sistema projeta o rendimento diário estimado para você baseado em índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
+        { title: "PATRIMÔNIO", desc: "Registre bens e investimentos. O sistema projeta o rendimento diário estimado para você baseado em índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
         { title: "ESTRATÉGIA", desc: "Analise seu DRE e Fluxo de Caixa. Use 'Todo o Período' para um panorama histórico total.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
     ];
     return (<div className="fixed inset-0 bg-indigo-600 z-[200] flex items-center justify-center p-6 text-white text-center animate-fade-in"><div className="max-w-sm space-y-8">
