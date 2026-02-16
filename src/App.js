@@ -13,7 +13,7 @@ import {
     Target as LucideTarget, Search as LucideSearch, Home as LucideHome, RefreshCw as LucideRefresh, AlertCircle as LucideAlertCircle, 
     UserCircle as LucideUserCircle, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Calculator as LucideCalculator, 
     Menu as LucideMenu, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Briefcase as LucideBriefcase, User as LucideUser,
-    ArrowUpRight as LucideArrowUpRight, Wallet as LucideWallet, Calendar as LucideCalendar
+    ArrowUpRight as LucideArrowUpRight
 } from 'lucide-react';
 
 // ============================================================================
@@ -615,6 +615,13 @@ export default function App() {
         });
     }, [user, db, currentCompany]);
 
+    // FIX: Atualizar o tipo do formulário automaticamente quando a conta muda
+    useEffect(() => {
+        if (activeCategories.length > 0) {
+            setFormType(activeCategories[0].value);
+        }
+    }, [activeCategories]);
+
     useEffect(() => {
         if (!user || !db || !currentCompany) return;
         const qTx = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`));
@@ -714,10 +721,14 @@ export default function App() {
         e.preventDefault();
         const val = parseFloat(formAmount.replace(/\./g, '').replace(',', '.'));
         if (isNaN(val)) return;
-        const date = new Date(formDate + 'T12:00:00');
+        
+        // Fix: Use correct date logic with time to avoid timezone shifts
+        const parts = formDate.split('-');
+        const date = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+
         const ref = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
         if (editingTransaction) {
-            await updateDoc(doc(ref, editingTransaction.id), { desc: formDesc, amount: val, type: formType, subcategory: formSubcat });
+            await updateDoc(doc(ref, editingTransaction.id), { desc: formDesc, amount: val, type: formType, subcategory: formSubcat, createdAt: Timestamp.fromDate(date) });
         } else if (isRecurring && recurringMonths > 1) {
             await handleAddRecurringTransaction({ desc: formDesc, amount: val, type: formType, months: recurringMonths });
         } else {
