@@ -944,7 +944,7 @@ export default function App() {
                 </div>
             )}
 
-            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-4 rounded-3xl shadow-2xl z-[80] font-bold text-xs md:text-sm animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer w-max max-w-[90%]" onClick={()=>setShowUpdateMessage(false)}><LucideRocket className="shrink-0"/> <span>ASSISTENTE IA, TESTE AGORA!</span> <LucideX size={16} className="shrink-0"/></div>}
+            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-4 rounded-3xl shadow-2xl z-[80] font-bold text-xs md:text-sm animate-bounce flex items-center justify-center gap-3 border-4 border-white cursor-pointer w-[90%] md:w-auto text-center" onClick={()=>setShowUpdateMessage(false)}><LucideRocket className="shrink-0"/> <span>ASSISTENTE IA, TESTE AGORA!</span> <LucideX size={16} className="shrink-0"/></div>}
             
             {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v50', 'true')}} />}
             {showCalculator && <CalculatorModal onClose={()=>setShowCalculator(false)} onConfirm={v=>{setFormAmount(v); setShowCalculator(false)}} />}
@@ -1030,12 +1030,25 @@ function TutorialModal({onClose}){
 }
 
 function CashFlowView({ transactions, accumulatedBalance, companyType }){
-    const { receita, totalSaidas } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
+    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl border border-green-100 dark:border-green-900/30"><h3 className="text-green-800 dark:text-green-400 text-sm font-semibold uppercase mb-2">Entradas</h3><p className="text-3xl font-bold text-green-700 dark:text-green-400">{safeCurrency(receita)}</p></div>
-            <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl border border-red-100 dark:border-red-900/30"><h3 className="text-red-800 dark:text-red-400 text-sm font-semibold uppercase mb-2">Saídas</h3><p className="text-3xl font-bold text-red-700 dark:text-red-400">{safeCurrency(totalSaidas)}</p></div>
-            <div className={`p-6 rounded-xl border ${accumulatedBalance >= 0 ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-900/30' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30'}`}><h3 className={`${accumulatedBalance >= 0 ? 'text-indigo-800 dark:text-indigo-300' : 'text-orange-800 dark:text-orange-300'} text-sm font-semibold uppercase mb-2`}>Saldo Atual</h3><p className={`text-3xl font-black ${accumulatedBalance >= 0 ? 'text-indigo-900 dark:text-indigo-200' : 'text-orange-700 dark:text-orange-300'}`}>{safeCurrency(accumulatedBalance)}</p></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl border border-green-100 dark:border-green-900/30">
+                <h3 className="text-green-800 dark:text-green-400 text-sm font-semibold uppercase mb-2">Entradas</h3>
+                <p className="text-3xl font-bold text-green-700 dark:text-green-400">{safeCurrency(receita)}</p>
+            </div>
+            <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl border border-red-100 dark:border-red-900/30">
+                <h3 className="text-red-800 dark:text-red-400 text-sm font-semibold uppercase mb-2">Saídas</h3>
+                <p className="text-3xl font-bold text-red-700 dark:text-red-400">{safeCurrency(totalSaidas)}</p>
+            </div>
+            <div className={`p-6 rounded-xl border ${fluxoCaixa >= 0 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30'}`}>
+                <h3 className={`${fluxoCaixa >= 0 ? 'text-blue-800 dark:text-blue-300' : 'text-orange-800 dark:text-orange-300'} text-sm font-semibold uppercase mb-2`}>Resultado do Mês</h3>
+                <p className={`text-3xl font-black ${fluxoCaixa >= 0 ? 'text-blue-900 dark:text-blue-200' : 'text-orange-700 dark:text-orange-300'}`}>{safeCurrency(fluxoCaixa)}</p>
+            </div>
+            <div className={`p-6 rounded-xl border ${accumulatedBalance >= 0 ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-900/30' : 'bg-pink-50 dark:bg-pink-900/20 border-pink-100 dark:border-pink-900/30'}`}>
+                <h3 className={`${accumulatedBalance >= 0 ? 'text-indigo-800 dark:text-indigo-300' : 'text-pink-800 dark:text-pink-300'} text-sm font-semibold uppercase mb-2`}>Saldo Acumulado</h3>
+                <p className={`text-3xl font-black ${accumulatedBalance >= 0 ? 'text-indigo-900 dark:text-indigo-200' : 'text-pink-700 dark:text-pink-300'}`}>{safeCurrency(accumulatedBalance)}</p>
+            </div>
         </div>
     );
 }
