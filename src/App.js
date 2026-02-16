@@ -211,7 +211,7 @@ const AssetsView = ({ assets, onAddAsset, onUpdateAsset, onDeleteAsset }) => {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6 animate-fade-in pb-16">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <h3 className="text-slate-500 text-sm font-bold uppercase mb-2 flex justify-center items-center gap-2"><LucideHome size={16}/> Bens Materiais</h3>
@@ -223,31 +223,63 @@ const AssetsView = ({ assets, onAddAsset, onUpdateAsset, onDeleteAsset }) => {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                 <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white flex items-center gap-2">
                     {editingId ? <LucideEdit2 className="text-indigo-600"/> : <LucidePlus className="text-indigo-600"/>} 
-                    {editingId ? 'Editar Patrimônio' : 'Cadastrar Novo Patrimônio'}
+                    {editingId ? 'Editar Patrimônio' : 'Novo Patrimônio'}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
-                    <input placeholder="Ex: Veículo Corolla" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
-                    <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
-                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
+                    <select value={type} onChange={e => setType(e.target.value)} className="p-3 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
+                    <input placeholder="Ex: Veículo Corolla" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-3 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input placeholder="Valor (R$)" type="tel" value={value} onChange={e => setValue(e.target.value)} className="p-3 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-3 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
                 </div>
                 <div className="flex gap-2 mt-3">
-                    <button onClick={handleSave} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700">
+                    <button onClick={handleSave} className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 active:scale-95">
                         {editingId ? <LucideRefresh size={18}/> : <LucidePlus size={18}/>} 
-                        {editingId ? 'Atualizar' : 'Adicionar ao Patrimônio'}
+                        {editingId ? 'Atualizar' : 'Salvar'}
                     </button>
                     {editingId && (
-                        <button onClick={handleCancelEdit} className="px-6 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-white rounded-lg font-bold transition-all">
+                        <button onClick={handleCancelEdit} className="px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-white rounded-lg font-bold transition-all active:scale-95">
                             Cancelar
                         </button>
                     )}
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+            {/* Mobile View: Cards */}
+            <div className="md:hidden space-y-3">
+                {assets.map(a => {
+                    const corrected = getCorrectedValue(a);
+                    return (
+                    <div key={a.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                        <div className={`absolute top-0 left-0 w-1 h-full ${a.type === 'bens' ? 'bg-amber-400' : 'bg-green-500'}`}></div>
+                        <div className="flex justify-between items-start mb-2 pl-3">
+                            <div>
+                                <h4 className="font-bold text-slate-800 dark:text-white text-lg leading-tight">{a.name}</h4>
+                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{a.type} {a.indexer ? `• ${a.indexer}` : ''}</span>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm text-slate-400 line-through decoration-slate-300 decoration-2">{safeCurrency(a.value)}</p>
+                                <p className="text-xl font-black text-indigo-600 flex items-center justify-end gap-1">
+                                    {a.indexer ? <LucideArrowUpRight size={16}/> : null}
+                                    {safeCurrency(corrected)}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center pl-3 pt-2 border-t dark:border-slate-700 mt-2">
+                            <div className="text-xs text-green-600 font-mono font-bold bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded">+{safeCurrency(getDailyReturn(a.value, a.indexer))}/dia</div>
+                            <div className="flex gap-3">
+                                <button onClick={() => handleEdit(a)} className="text-indigo-500 font-bold text-sm p-2">EDITAR</button>
+                                <button onClick={() => onDeleteAsset(a.id)} className="text-red-500 font-bold text-sm p-2">EXCLUIR</button>
+                            </div>
+                        </div>
+                    </div>
+                )})}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden md:block bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                  <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
                         <tr><th className="p-4">Item Patrimonial</th><th className="p-4">Tipo</th><th className="p-4">Reajuste</th><th className="p-4 text-right">Valor Inicial</th><th className="p-4 text-right text-indigo-600">Valor Corrigido</th><th className="p-4 text-right">Rend. Diário</th><th className="p-4 w-24">Ações</th></tr>
@@ -435,7 +467,7 @@ const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, co
     };
 
     return (
-        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border shadow-sm animate-fade-in">
+        <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl border shadow-sm animate-fade-in pb-24">
             <h2 className="text-xl font-black mb-8 flex items-center gap-3 text-slate-800 dark:text-white uppercase tracking-tighter"><LucideTarget className="text-indigo-600" /> Planejamento Orçamentário</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {cats.map(cat => (
@@ -464,7 +496,7 @@ const DREView = ({ transactions, companyType }) => {
     const real = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
     const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl overflow-hidden border dark:border-slate-800 animate-fade-in">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl overflow-hidden border dark:border-slate-800 animate-fade-in mb-24">
             <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-900/50 p-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"><div>Descrição</div><div className="text-right">Realizado (R$)</div></div>
             <div className="divide-y dark:divide-slate-700">
                 {cats.map(c => (
@@ -535,9 +567,9 @@ export default function App() {
         const app = initializeApp(firebaseConfig);
         const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
         
-        const updateViews = parseInt(localStorage.getItem('upd_v48_final') || '0');
-        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v48_final', (updateViews + 1).toString()); }
-        if (!localStorage.getItem('hasSeenFinTutorial_v48')) setShowTutorial(true);
+        const updateViews = parseInt(localStorage.getItem('upd_v49_final') || '0');
+        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v49_final', (updateViews + 1).toString()); }
+        if (!localStorage.getItem('hasSeenFinTutorial_v49')) setShowTutorial(true);
 
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
     }, []);
@@ -721,66 +753,76 @@ export default function App() {
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-500 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
-            <header className="max-w-5xl mx-auto p-6 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="flex items-center gap-4">
-                    <button onClick={()=>setShowSidebar(true)} className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-md"><LucideMenu size={28} /></button>
-                    <div><h1 className="text-3xl font-black tracking-tighter">Gestão Financeira</h1><p className="text-xs text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-1"><LucideBuilding2 size={12} /> {currentCompany?.name}</p></div>
-                    <button onClick={()=>setShowCalculator(true)} className="p-2 text-indigo-600 hover:scale-110 transition-transform"><LucideCalculator size={24}/></button>
+            <header className="max-w-5xl mx-auto p-4 flex flex-col gap-4">
+                <div className="flex flex-row justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <button onClick={()=>setShowSidebar(true)} className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-md active:scale-95"><LucideMenu size={24} /></button>
+                        <div className="leading-tight">
+                            <h1 className="text-xl md:text-3xl font-black tracking-tighter">Financeiro</h1>
+                            <p className="text-[10px] md:text-xs text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-1"><LucideBuilding2 size={10} /> {currentCompany?.name}</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <button onClick={()=>setShowCalculator(true)} className="p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-xl active:scale-95"><LucideCalculator size={20}/></button>
+                        <button onClick={()=>setDarkMode(!darkMode)} className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-sm active:scale-95">{darkMode ? <LucideSun className="text-amber-400" size={20}/> : <LucideMoon className="text-indigo-600" size={20}/>}</button>
+                    </div>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
-                    <button onClick={()=>setDarkMode(!darkMode)} className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun className="text-amber-400"/> : <LucideMoon className="text-indigo-600"/>}</button>
-                    <select className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-md font-bold outline-none border-0" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-                    {period !== 'ALL' && <select className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-md font-bold outline-none border-0" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}</select>}
+                
+                <div className="grid grid-cols-2 md:flex md:justify-end gap-2">
+                    <select className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-md font-bold outline-none border-0 w-full md:w-auto" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+                    {period !== 'ALL' && <select className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-md font-bold outline-none border-0 w-full md:w-auto" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}</select>}
                 </div>
             </header>
 
-            <main className="max-w-5xl mx-auto p-4">
-                <div className="flex overflow-x-auto gap-4 mb-8 no-print border-b dark:border-slate-800">
+            <main className="max-w-5xl mx-auto p-4 pb-32">
+                <div className="flex overflow-x-auto gap-2 md:gap-4 mb-6 no-print border-b dark:border-slate-800 pb-2 snap-x">
                     {['lancamentos', 'planejamento', 'patrimonio', 'resultados'].map(t => (
-                        <button key={t} onClick={() => setMainTab(t)} className={`px-6 py-4 font-black transition-all border-b-4 ${mainTab === t ? 'border-indigo-600 text-indigo-600 scale-105' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-                            {t === 'lancamentos' ? 'LANÇAMENTOS' : t === 'planejamento' ? 'PLANEJAMENTO' : t === 'patrimonio' ? 'PATRIMÔNIO' : 'RESULTADOS'}
+                        <button key={t} onClick={() => setMainTab(t)} className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 md:py-4 font-black transition-all border-b-4 text-xs md:text-sm uppercase tracking-wide ${mainTab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+                            {t === 'lancamentos' ? 'Lançamentos' : t === 'planejamento' ? 'Planejamento' : t === 'patrimonio' ? 'Patrimônio' : 'Resultados'}
                         </button>
                     ))}
                 </div>
 
                 {mainTab === 'lancamentos' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 md:gap-8">
                         <div className="lg:col-span-2 space-y-6">
-                            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800">
+                            <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800">
                                 <h2 className="font-black text-xl mb-6 flex items-center gap-2 uppercase tracking-wide">{editingTransaction ? <LucideEdit2 className="text-indigo-500"/> : <LucidePlus className="text-green-500"/>} {editingTransaction ? 'Editando' : 'Novo Lançamento'}</h2>
-                                <form onSubmit={handleSaveTransaction} className="space-y-5">
+                                <form onSubmit={handleSaveTransaction} className="space-y-4">
                                     <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
                                     <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500 dark:text-white">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
-                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="O que deseja registrar?" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
-                                    <div className="relative"><span className="absolute left-4 top-4 font-black text-slate-400">R$</span><input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-4 pl-12 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-black text-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" /></div>
+                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Descrição" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
+                                    <div className="relative"><span className="absolute left-4 top-4 font-black text-slate-400">R$</span><input type="tel" value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-4 pl-12 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-black text-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" /></div>
                                     {!editingTransaction && (<div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border"><div className="flex items-center gap-3"><input type="checkbox" id="rec" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-6 h-6 rounded-lg text-indigo-600" /><label htmlFor="rec" className="font-black text-xs uppercase tracking-widest text-slate-500">Fixa Mensal?</label></div>{isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(parseInt(e.target.value))} className="w-16 p-2 rounded-lg bg-white dark:bg-slate-800 text-center font-bold" />}</div>)}
-                                    <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95">REGISTRAR</button>
+                                    <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95">SALVAR</button>
                                 </form>
                             </div>
                         </div>
                         <div className="lg:col-span-3">
-                            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border dark:border-slate-800 h-[700px] flex flex-col overflow-hidden">
-                                <div className="p-6 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><span className="font-black uppercase text-xs tracking-widest text-slate-400">Fluxo de Movimentação</span><div className="relative"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Procurar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-white dark:bg-slate-950 rounded-xl text-xs w-48 outline-none border dark:border-slate-700" /></div></div>
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border dark:border-slate-800 h-[600px] md:h-[700px] flex flex-col overflow-hidden">
+                                <div className="p-4 md:p-6 border-b flex flex-col md:flex-row justify-between items-center gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+                                    <span className="font-black uppercase text-xs tracking-widest text-slate-400 w-full md:w-auto text-left">Fluxo de Movimentação</span>
+                                    <div className="relative w-full md:w-auto"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Procurar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-white dark:bg-slate-950 rounded-xl text-xs w-full md:w-48 outline-none border dark:border-slate-700" /></div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-3 space-y-3">
                                     {searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (
-                                        <div key={t.id} className="p-5 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl flex justify-between items-center group transition-all">
-                                            <div className="truncate"><p className="font-black truncate text-sm uppercase leading-tight">{t.desc}</p><p className="text-[10px] text-slate-400 font-black mt-1 uppercase">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
-                                            <div className="flex items-center gap-4">
-                                                <span className={`font-black whitespace-nowrap text-lg ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
-                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => handleEditClick(t)} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 rounded-xl mr-2"><LucideEdit2 size={18}/></button>
+                                        <div key={t.id} className="p-4 md:p-5 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl flex justify-between items-center group transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                            <div className="truncate flex-1 pr-2">
+                                                <p className="font-black truncate text-sm uppercase leading-tight text-slate-700 dark:text-slate-200">{t.desc}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 md:gap-4">
+                                                <span className={`font-black whitespace-nowrap text-base md:text-lg ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
+                                                <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleEditClick(t)} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 rounded-lg"><LucideEdit2 size={16}/></button>
                                                     <button 
                                                         onClick={() => { 
                                                             if(t.recurringId) setDeletingRecurring(t); 
-                                                            else openConfirm(
-                                                                "Excluir Lançamento", 
-                                                                "Deseja apagar este lançamento?", 
-                                                                () => handleDeleteSeries(t.id, false)
-                                                            ); 
+                                                            else openConfirm("Excluir", "Apagar lançamento?", () => handleDeleteSeries(t.id, false)); 
                                                         }} 
-                                                        className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"
+                                                        className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg"
                                                     >
-                                                        <LucideTrash2 size={18}/>
+                                                        <LucideTrash2 size={16}/>
                                                     </button>
                                                 </div>
                                             </div>
@@ -806,7 +848,7 @@ export default function App() {
                 {mainTab === 'resultados' && (
                     <div className="space-y-8 animate-fade-in">
                          <CashFlowView transactions={filteredData} companyType={companyType} />
-                         <div className="flex gap-2 bg-slate-200 dark:bg-slate-900 p-1.5 rounded-2xl w-fit">
+                         <div className="flex gap-2 bg-slate-200 dark:bg-slate-900 p-1.5 rounded-2xl w-fit mx-auto md:mx-0">
                             {['dre', 'graficos'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${resultTab === k ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-md' : 'text-slate-500'}`}>{k}</button>))}
                          </div>
                          {resultTab === 'dre' && <DREView transactions={filteredData} companyType={companyType} />}
@@ -820,11 +862,11 @@ export default function App() {
                 <div className="fixed inset-0 bg-indigo-600 z-[150] flex items-center justify-center p-6 text-white text-center">
                     <div className="max-w-md space-y-8 animate-fade-in">
                         <div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl"><LucideRocket size={48} className="text-indigo-600"/></div>
-                        <h2 className="text-4xl font-black tracking-tighter uppercase leading-none">Bem-vindo ao seu Sistema Financeiro</h2>
-                        <p className="text-lg opacity-90">Para começar, que tipo de conta deseja gerenciar agora?</p>
+                        <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase leading-none">Bem-vindo</h2>
+                        <p className="text-base md:text-lg opacity-90">Que tipo de conta deseja gerenciar?</p>
                         <div className="grid grid-cols-1 gap-4">
-                            <button onClick={() => handleCreateCompany('Minhas Finanças', 'personal')} className="bg-white text-indigo-600 py-6 rounded-3xl font-black text-xl shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all"><LucideUserCircle size={32}/> Pessoa Física</button>
-                            <button onClick={() => handleCreateCompany('Minha Empresa', 'business')} className="bg-indigo-900/50 text-white py-6 rounded-3xl font-black text-xl shadow-xl border-4 border-indigo-400 flex items-center justify-center gap-3 active:scale-95 transition-all"><LucideBriefcase size={32}/> Empresa / Jurídico</button>
+                            <button onClick={() => handleCreateCompany('Minhas Finanças', 'personal')} className="bg-white text-indigo-600 py-5 rounded-3xl font-black text-lg shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all"><LucideUserCircle size={28}/> Pessoa Física</button>
+                            <button onClick={() => handleCreateCompany('Minha Empresa', 'business')} className="bg-indigo-900/50 text-white py-5 rounded-3xl font-black text-lg shadow-xl border-4 border-indigo-400 flex items-center justify-center gap-3 active:scale-95 transition-all"><LucideBriefcase size={28}/> Empresa</button>
                         </div>
                     </div>
                 </div>
@@ -832,13 +874,13 @@ export default function App() {
 
             {deletingRecurring && (
                 <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border dark:border-slate-700">
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border dark:border-slate-700 animate-fade-in-up">
                         <LucideAlertCircle className="mx-auto text-amber-500 mb-4" size={48} />
                         <h3 className="text-xl font-black mb-2 uppercase tracking-tighter">Série Recorrente</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Deseja apagar apenas esta parcela ou toda a sequência futura?</p>
                         <div className="space-y-3">
-                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, false)} className="w-full py-4 bg-slate-100 dark:bg-slate-700 font-bold rounded-2xl transition-all">Apagar APENAS ESTE</button>
-                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, true)} className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg transition-all">Apagar TODA A SÉRIE</button>
+                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, false)} className="w-full py-4 bg-slate-100 dark:bg-slate-700 font-bold rounded-2xl transition-all active:scale-95">Apagar APENAS ESTE</button>
+                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, true)} className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95">Apagar TODA A SÉRIE</button>
                             <button onClick={()=>setDeletingRecurring(null)} className="w-full py-2 text-slate-400 font-bold">Cancelar</button>
                         </div>
                     </div>
@@ -851,16 +893,16 @@ export default function App() {
                         <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">{confirmModal.title}</h3>
                         <p className="text-slate-500 dark:text-slate-400 mb-6">{confirmModal.message}</p>
                         <div className="flex gap-3">
-                            <button onClick={() => setConfirmModal(null)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-xl">Cancelar</button>
-                            <button onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg">Confirmar</button>
+                            <button onClick={() => setConfirmModal(null)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-xl active:scale-95">Cancelar</button>
+                            <button onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg active:scale-95">Confirmar</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-8 py-4 rounded-full shadow-2xl z-[80] font-black animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer" onClick={()=>setShowUpdateMessage(false)}><LucideRocket/> NOVIDADE: ASSISTENTE IA MAIS INTELIGENTE E VALOR CORRIGIDO! <LucideX size={16}/></div>}
+            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-4 rounded-3xl shadow-2xl z-[80] font-bold text-xs md:text-sm animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer w-max max-w-[90%]" onClick={()=>setShowUpdateMessage(false)}><LucideRocket className="shrink-0"/> <span>NOVIDADE: VISUAL OTIMIZADO PARA CELULAR!</span> <LucideX size={16} className="shrink-0"/></div>}
             
-            {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v48', 'true')}} />}
+            {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v49', 'true')}} />}
             {showCalculator && <CalculatorModal onClose={()=>setShowCalculator(false)} onConfirm={v=>{setFormAmount(v); setShowCalculator(false)}} />}
             
             <button 
@@ -873,9 +915,9 @@ export default function App() {
                     right: chatPos.x ? `${chatPos.x}px` : '32px',
                     position: 'fixed'
                 }}
-                className="z-[70] p-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl hover:scale-110 transition-transform border-4 border-white dark:border-slate-800 ring-4 ring-indigo-600/20 active:scale-95 select-none touch-none"
+                className="z-[70] p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl hover:scale-110 transition-transform border-4 border-white dark:border-slate-800 ring-4 ring-indigo-600/20 active:scale-95 select-none touch-none"
             >
-                <LucideMessageSquare size={32} />
+                <LucideMessageSquare size={28} />
             </button>
 
             {showChat && <ChatInterface isOpen={true} onClose={()=>setShowChat(false)} onAddTransaction={async(d)=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`), {...d, createdAt: Timestamp.fromDate(d.date)})} onAddRecurringTransaction={handleAddRecurringTransaction} onAddAsset={d=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), d)} currentCompany={currentCompany} />}
@@ -923,7 +965,7 @@ function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
         { title: "BEM-VINDO!", desc: "Seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "ASSISTENTE + ESPERTO", desc: "Agora ele entende suas palavras! Digite 'Uber' e ele sabe que é Transporte. 'Mercado' vira Alimentação.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
+        { title: "ASSISTENTE IA", desc: "Agora ele entende suas palavras! Digite 'Uber 50' e ele sabe que é uma despesa de Transporte. 'Mercado' vira Alimentação, "salário" é entrada de capital.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
         { title: "VALOR CORRIGIDO", desc: "No seu Patrimônio, veja quanto seu dinheiro já rendeu automaticamente na nova coluna.", icon: <LucideTrendingUp size={48} className="text-green-500"/> },
         { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registrar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-indigo-500"/> },
         { title: "PATRIMÔNIO", desc: "Registre bens e investimentos. Agora com cálculo de correção monetária.", icon: <LucideHome size={48} className="text-amber-500"/> }
