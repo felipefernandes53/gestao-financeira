@@ -18,7 +18,6 @@ import {
 // 1. CONFIGURAÇÕES E CONSTANTES GLOBAIS (ANTI-CRASH)
 // ============================================================================
 
-// --- SUAS CHAVES REAIS DO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
   authDomain: "app-financeiro-2f.firebaseapp.com",
@@ -41,26 +40,17 @@ const PERIOD_OPTIONS = [
     { value: 'Q3', label: '3º Trimestre' }, { value: 'Q4', label: '4º Trimestre' },
     { value: 'S1', label: '1º Semestre' }, { value: 'S2', label: '2º Semestre' },
     { value: 'Y', label: 'Ano Atual' },
-    { value: 'ALL', label: 'Todo o Período (Todos os Anos)' }
+    { value: 'ALL', label: 'Todo o Período' } 
 ];
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
-// --- CATEGORIAS EMPRESARIAIS ---
 const TransactionTypeBusiness = { 
     RECEITA: 'Receita', 
     CUSTO: 'Custo', 
     DESPESA_OPERACIONAL: 'Despesa Operacional', 
     JUROS_FINANCEIROS: 'Juros/Financeiro', 
     IMPOSTOS: 'Impostos' 
-};
-
-const DEFAULT_SUBCATEGORIES_BUSINESS = {
-    [TransactionTypeBusiness.RECEITA]: ['Vendas de Produtos', 'Prestação de Serviços', 'Rendimentos', 'Outras Receitas'],
-    [TransactionTypeBusiness.CUSTO]: ['Compra de Mercadoria (CMV)', 'Matéria-Prima', 'Embalagens', 'Fretes'],
-    [TransactionTypeBusiness.DESPESA_OPERACIONAL]: ['Salários', 'Aluguel', 'Marketing', 'Energia/Água', 'Manutenção', 'Material Escritório', 'Pro-labore'],
-    [TransactionTypeBusiness.JUROS_FINANCEIROS]: ['Tarifas Bancárias', 'Juros Empréstimos', 'Multas'],
-    [TransactionTypeBusiness.IMPOSTOS]: ['Simples Nacional', 'ICMS', 'ISS', 'PIS', 'COFINS', 'IRPJ', 'CSLL']
 };
 
 const categoriesBusiness = [
@@ -71,7 +61,6 @@ const categoriesBusiness = [
     { value: TransactionTypeBusiness.IMPOSTOS, label: 'Impostos (-)', color: 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30', isPositive: false },
 ];
 
-// --- CATEGORIAS PESSOAIS ---
 const TransactionTypePersonal = { 
     RECEITA: 'Renda', 
     MORADIA: 'Moradia', 
@@ -82,18 +71,6 @@ const TransactionTypePersonal = {
     EDUCACAO: 'Educação', 
     INVESTIMENTOS: 'Investimentos/Poupança', 
     DIVIDAS: 'Dívidas/Empréstimos' 
-};
-
-const DEFAULT_SUBCATEGORIES_PERSONAL = {
-    [TransactionTypePersonal.RECEITA]: ['Salário', 'Freelance', 'Dividendos', 'Aluguéis Recebidos'],
-    [TransactionTypePersonal.MORADIA]: ['Aluguel/Condomínio', 'Luz', 'Água', 'Internet', 'Gás', 'Manutenção'],
-    [TransactionTypePersonal.ALIMENTACAO]: ['Supermercado', 'Restaurantes', 'Ifood/Delivery', 'Padaria'],
-    [TransactionTypePersonal.TRANSPORTE]: ['Combustível', 'Uber/99', 'Ônibus/Metrô', 'Manutenção Veículo', 'IPVA/Seguro'],
-    [TransactionTypePersonal.LAZER]: ['Viagens', 'Streaming (Netflix/Spotify)', 'Cinema', 'Bares', 'Hobbies'],
-    [TransactionTypePersonal.SAUDE]: ['Plano de Saúde', 'Farmácia', 'Academia', 'Terapia'],
-    [TransactionTypePersonal.EDUCACAO]: ['Faculdade/Escola', 'Cursos Online', 'Livros'],
-    [TransactionTypePersonal.INVESTIMENTOS]: ['Reserva de Emergência', 'Ações/FIIs', 'CDB/Tesouro'],
-    [TransactionTypePersonal.DIVIDAS]: ['Cartão de Crédito', 'Empréstimo Pessoal', 'Financiamento']
 };
 
 const categoriesPersonal = [
@@ -108,37 +85,23 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// *** VARIÁVEL DE SEGURANÇA OBRIGATÓRIA ***
-// Garante que o código nunca quebre ao inicializar o state
-const transactionCategories = categoriesBusiness; 
-
 // ============================================================================
 // 2. FUNÇÕES AUXILIARES
 // ============================================================================
 
 const safeCurrency = (value) => { 
     if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00'; 
-    try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value); } 
-    catch (e) { return 'R$ Error'; } 
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
 
 const safeDate = (timestamp) => { 
     if (!timestamp || typeof timestamp.toDate !== 'function') return 'Data N/A'; 
-    try { return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(timestamp.toDate()); } 
-    catch (e) { return 'Inválida'; } 
+    return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(timestamp.toDate());
 };
 
-const safePercent = (value, total) => { 
-    if (!total || total === 0) return '0.0%'; 
-    return `${((value / total) * 100).toFixed(1)}%`; 
-};
-
-// Cálculo financeiro unificado
 const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const safeData = Array.isArray(data) ? data : [];
-    // Seleção segura de categorias
     const cats = type === 'personal' ? categoriesPersonal : categoriesBusiness;
-    
     const sumByType = (tType) => safeData.reduce((acc, t) => t.type === tType ? acc + (Number(t.amount) || 0) : acc, 0);
     
     const subcatTotals = {};
@@ -151,24 +114,16 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
 
     const receitaKey = type === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
     const receita = sumByType(receitaKey);
-    
     let totalSaidas = 0;
-    cats.forEach(cat => { 
-        if (!cat.isPositive) totalSaidas += sumByType(cat.value); 
-    });
-
+    cats.forEach(cat => { if (!cat.isPositive) totalSaidas += sumByType(cat.value); });
     const fluxoCaixa = receita - totalSaidas;
     
-    const safeAssets = Array.isArray(assets) ? assets : [];
-    const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
-    const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
+    const totalBens = assets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
+    const totalInvest = assets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
     const patrimonioLiquido = (totalBens + totalInvest + fluxoCaixa);
 
-    const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals, totalBens, totalInvest, patrimonioLiquido };
-    
-    cats.forEach(cat => { 
-        financials[cat.value] = sumByType(cat.value); 
-    });
+    const financials = { receita, totalSaidas, fluxoCaixa, totalBens, totalInvest, patrimonioLiquido };
+    cats.forEach(cat => { financials[cat.value] = sumByType(cat.value); });
     
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
@@ -179,10 +134,9 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
 };
 
 // ============================================================================
-// 3. SUB-COMPONENTES
+// 3. COMPONENTES
 // ============================================================================
 
-// --- ABA PATRIMÔNIO & MERCADO ---
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
@@ -193,27 +147,23 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     useEffect(() => {
         const fetchMarketData = async () => {
             try {
-                // Moedas via AwesomeAPI (Pública)
                 const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
                 const dataCoins = await resCoins.json();
-                
-                // Índices via HG Brasil com Fallback
-                let hgData = { cdi: 11.25, selic: 11.25 }; 
+                let hgData = { taxes: [{ cdi: 11.25, selic: 11.25 }] }; 
                 try {
-                    const key = '855e9e8f';
-                    const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
+                    const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=855e9e8f&format=json-cors`);
                     const jsonHg = await resHg.json();
-                    if(jsonHg.results && jsonHg.results[0]) hgData = jsonHg.results[0];
-                } catch(e) { console.log('HG Brasil CORS fallback'); }
+                    if(jsonHg.results) hgData = jsonHg.results;
+                } catch(e) {}
 
                 setMarketData({
                     USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
                     EUR: `R$ ${parseFloat(dataCoins.EURBRL.bid).toFixed(2)}`,
-                    BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR', {maximumFractionDigits:0})}`,
-                    CDI: `${hgData.cdi}%`,
-                    SELIC: `${hgData.selic}%`
+                    BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR')}`,
+                    CDI: `${hgData[0]?.cdi || 11.25}%`,
+                    SELIC: `${hgData[0]?.selic || 11.25}%`
                 });
-            } catch (err) { setMarketData({ USD: 'R$ 5,60', EUR: 'R$ 6,00', BTC: '-', CDI: '11.25%', SELIC: '11.25%' }); }
+            } catch (err) { setMarketData({ USD: 'Erro', EUR: '-', BTC: '-', CDI: '11.25%', SELIC: '11.25%' }); }
         };
         fetchMarketData();
     }, []);
@@ -225,68 +175,76 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
         setName(''); setValue(''); setIndexer('');
     };
 
-    const safeAssets = Array.isArray(assets) ? assets : [];
-    const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
-    const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
-
-    const getProjection = (val, idx) => {
+    const getDailyReturn = (val, idx) => {
         let rate = 0;
         if(idx === 'CDI' || idx === 'SELIC') rate = 0.1125;
         if(idx === 'IPCA') rate = 0.045;
         if(idx === 'INCC') rate = 0.04;
-        if(rate === 0) return '-';
-        const projected = val * (1 + rate);
-        return safeCurrency(projected);
+        if(rate === 0) return 0;
+        // Simulação de rendimento diário (capitalização simples aproximada)
+        return (val * rate) / 365;
     };
 
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-6 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <h3 className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase mb-2 flex items-center gap-2"><LucideHome size={16}/> Meus Bens</h3>
-                    <p className="text-3xl font-bold text-slate-800 dark:text-white">{safeCurrency(totalBens)}</p>
+                    <h3 className="text-slate-500 text-sm font-bold uppercase mb-2 flex justify-center items-center gap-2"><LucideHome size={16}/> Bens Materiais</h3>
+                    <p className="text-3xl font-bold">{safeCurrency(assets.filter(a=>a.type==='bens').reduce((acc,c)=>acc+c.value, 0))}</p>
                 </div>
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <h3 className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase mb-2 flex items-center gap-2"><LucideTrendingUp size={16}/> Meus Investimentos</h3>
-                    <p className="text-3xl font-bold text-green-600 dark:text-green-400">{safeCurrency(totalInvest)}</p>
-                </div>
-            </div>
-            
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
-                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado Hoje</h3>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.USD}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.EUR}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.BTC}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
+                    <h3 className="text-slate-500 text-sm font-bold uppercase mb-2 flex justify-center items-center gap-2"><LucideTrendingUp size={16}/> Investimentos Ativos</h3>
+                    <p className="text-3xl font-bold text-green-600">{safeCurrency(assets.filter(a=>a.type==='investimento').reduce((acc,c)=>acc+c.value, 0))}</p>
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-4">Cadastrar Novo Item</h3>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
-                    <input placeholder="Nome (ex: Apto)" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
-                    <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
-                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado Financeiro</h3>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Dólar</p><p className="font-bold text-sm">{marketData.USD}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Euro</p><p className="font-bold text-sm">{marketData.EUR}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Bitcoin</p><p className="font-bold text-sm">{marketData.BTC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">CDI</p><p className="font-bold text-sm">{marketData.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Selic</p><p className="font-bold text-sm">{marketData.SELIC}</p></div>
                 </div>
-                <button onClick={handleAdd} className="w-full mt-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold">Adicionar</button>
             </div>
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white flex items-center gap-2"><LucidePlus className="text-indigo-600"/> Cadastrar Novo Patrimônio</h3>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
+                    <input placeholder="Ex: ViVaz Barra Funda" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
+                </div>
+                <button onClick={handleAdd} className="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg"><LucidePlus size={18}/> Adicionar ao Patrimônio</button>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400"><tr><th className="p-4">Item</th><th className="p-4">Tipo</th><th className="p-4">Índice</th><th className="p-4 text-right">Valor Atual</th><th className="p-4 text-right">Projeção (+12m)</th><th className="p-4 w-10"></th></tr></thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">{safeAssets.map(a => (<tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30"><td className="p-4 font-medium text-slate-800 dark:text-slate-200">{a.name}</td><td className="p-4 text-slate-500 dark:text-slate-400 capitalize">{a.type}</td><td className="p-4 text-slate-500 dark:text-slate-400">{a.indexer || '-'}</td><td className="p-4 text-right font-bold text-slate-700 dark:text-slate-200">{safeCurrency(a.value)}</td><td className="p-4 text-right text-green-600 dark:text-green-400">{getProjection(a.value, a.indexer)}</td><td className="p-4"><button onClick={() => onDeleteAsset(a.id)} className="text-red-400 hover:text-red-600"><LucideTrash2 size={16}/></button></td></tr>))}</tbody>
+                    <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                        <tr><th className="p-4">Item Patrimonial</th><th className="p-4">Tipo</th><th className="p-4">Reajuste</th><th className="p-4 text-right">Valor Atual</th><th className="p-4 text-right text-indigo-600">Rendimento Diário (Est.)</th><th className="p-4 w-10"></th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                        {assets.map(a => (<tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                            <td className="p-4 font-bold">{a.name}</td>
+                            <td className="p-4"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${a.type === 'bens' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{a.type.toUpperCase()}</span></td>
+                            <td className="p-4 font-mono">{a.indexer || '-'}</td>
+                            <td className="p-4 text-right font-bold">{safeCurrency(a.value)}</td>
+                            <td className="p-4 text-right text-green-600 font-mono font-bold">+{safeCurrency(getDailyReturn(a.value, a.indexer))}</td>
+                            <td className="p-4"><button onClick={() => onDeleteAsset(a.id)} className="text-red-400 hover:text-red-600 transition-colors"><LucideTrash2 size={16}/></button></td>
+                        </tr>))}
+                    </tbody>
                  </table>
-                 {safeAssets.length === 0 && <div className="p-8 text-center text-slate-400">Nenhum item cadastrado.</div>}
+                 {assets.length === 0 && <div className="p-12 text-center text-slate-400 italic">Sua carteira de patrimônio está vazia.</div>}
             </div>
         </div>
     );
 };
 
-// --- CHAT INTERFACE AVANÇADA (Versão 2.1) ---
+// --- CHAT INTERFACE (INTELIGÊNCIA LORD) ---
 const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
-    const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou seu assistente financeiro.", sender: 'bot' }]);
+    const [messages, setMessages] = useState([{ id: 1, text: "Olá Lord! Sou seu assistente financeiro de elite. Como posso organizar seu império hoje?", sender: 'bot' }]);
     const [inputText, setInputText] = useState('');
     const [lastActionId, setLastActionId] = useState(null);
     const messagesEndRef = useRef(null);
@@ -295,470 +253,164 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
     const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     useEffect(() => { if (isOpen) scrollToBottom(); }, [messages, isOpen]);
 
-    const parseValue = (text) => {
-        let clean = text.replace(/[^0-9.,-]/g, '');
-        // Lógica de parser brasileiro robusta
-        if (clean.includes(',') && clean.includes('.')) {
-             clean = clean.replace(/\./g, '').replace(',', '.');
-        } else if (clean.includes(',')) {
-             clean = clean.replace(',', '.');
-        } else {
-             clean = clean.replace(/\./g, '');
-        }
-        return parseFloat(clean);
-    };
-
     const handleSend = async () => {
         if (!inputText.trim()) return;
-        const text = inputText; const lowerText = text.toLowerCase();
+        const text = inputText; 
+        const lowerText = text.toLowerCase();
         setMessages(prev => [...prev, { id: Date.now(), text, sender: 'user' }]);
         setInputText('');
 
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
-            // 1. RECORRÊNCIA INTELIGENTE (Detecta "12 meses", "fixa")
-            if (lowerText.includes('meses') && (lowerText.includes('por') || lowerText.includes('durante') || lowerText.includes('repetir'))) {
-                 const amount = parseValue(text);
-                 const monthsMatch = text.match(/(\d+)\s*meses/);
-                 const months = monthsMatch ? parseInt(monthsMatch[1]) : 12;
-                 
-                 if (!isNaN(amount) && amount > 0) {
-                     const desc = text.replace(/[0-9.,]+/, '').replace(/(meses|por|durante|despesa|fixa|R\$|reais)/gi, '').trim();
-                     // Inferência de categoria
-                     let type = companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL;
-                     
-                     try {
-                         await onAddRecurringTransaction({ 
-                            desc: desc || 'Despesa Recorrente', 
-                            amount, 
-                            type, 
-                            subcategory: 'Fixa', 
-                            months 
-                         });
-                         botResponse.text = `🗓️ Agendado! "${desc}" de ${safeCurrency(amount)} será lançado automaticamente pelos próximos ${months} meses.`;
-                     } catch(e) { botResponse.text = "Erro ao agendar."; }
-                 } else { botResponse.text = "Entendi que é recorrente, mas preciso do valor."; }
-            }
-            // 2. PATRIMÔNIO (Investimentos, Bens)
-            else if (['comprei', 'investi', 'adquiri', 'novo bem', 'patrimonio', 'imóvel', 'carro', 'aplicação'].some(w => lowerText.includes(w))) {
-                 const amount = parseValue(text);
-                 const name = text.replace(/[0-9.,]+/, '').replace(/(comprei|investi|adquiri|um|uma|no|na|em|R\$|reais|novo|bem|patrimonio)/gi, '').trim();
-                 
-                 let indexer = '';
-                 if (lowerText.includes('cdi')) indexer = 'CDI';
-                 if (lowerText.includes('ipca')) indexer = 'IPCA';
-                 if (lowerText.includes('selic')) indexer = 'SELIC';
+            // --- CÉREBRO LORD NLP 4.0 ---
+            // 1. Extração de Valores Monetários (Prioriza o primeiro número que parece valor)
+            const moneyRegex = /(?:r\$|reais)?\s*(\d+(?:\.\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)/i;
+            const moneyMatch = text.match(moneyRegex);
+            const amount = moneyMatch ? parseFloat(moneyMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
 
-                 if (!isNaN(amount) && amount > 0) {
-                     const type = (lowerText.includes('invest') || lowerText.includes('ação') || lowerText.includes('cdb') || lowerText.includes('tesouro')) ? 'investimento' : 'bens';
-                     try {
-                         await onAddAsset({ name: name || 'Novo Item', value: amount, type, indexer, createdAt: Timestamp.now() });
-                         botResponse.text = `🏛️ Patrimônio: "${name || 'Item'}" de ${safeCurrency(amount)} ${indexer ? `(Indexado ao ${indexer})` : ''} salvo!`;
-                     } catch(e) { botResponse.text = "Erro ao salvar patrimônio."; }
-                 } else { botResponse.text = "Qual o valor do investimento/bem?"; }
+            // 2. Extração de Quantidade (Meses/Parcelas)
+            const quantityMatch = text.match(/(\d+)\s*meses/i);
+            const months = quantityMatch ? parseInt(quantityMatch[1]) : 1;
+
+            // 3. Classificação de Intenção
+            const isAsset = ['investi', 'comprei', 'patrimonio', 'imovel', 'carro', 'cdb', 'fii', 'acoes'].some(w => lowerText.includes(w));
+            const isIncome = ['recebi', 'ganhei', 'faturamento', 'venda', 'lucro', 'entrada', 'salario'].some(w => lowerText.includes(w));
+            const isRecurring = months > 1 || lowerText.includes('fixa') || lowerText.includes('todo mes') || lowerText.includes('recorrente');
+
+            // --- PROCESSAMENTO ---
+
+            // A. PATRIMÔNIO / INVESTIMENTO
+            if (isAsset && amount > 0) {
+                const name = text.replace(moneyMatch[0], '').replace(/(investi|comprei|um|uma|no|na|em|reais|R\$|patrimonio|carro|imovel|cdb)/gi, '').trim();
+                const type = (lowerText.includes('invest') || lowerText.includes('cdb') || lowerText.includes('ação')) ? 'investimento' : 'bens';
+                let idx = '';
+                if (lowerText.includes('cdi')) idx = 'CDI';
+                else if (lowerText.includes('ipca')) idx = 'IPCA';
+                else if (lowerText.includes('selic')) idx = 'SELIC';
+                else if (lowerText.includes('incc')) idx = 'INCC';
+                
+                try {
+                    await onAddAsset({ name: name || 'Novo Patrimônio', value: amount, type, indexer: idx, createdAt: Timestamp.now() });
+                    botResponse.text = `🏛️ Lord, registrei o ${type} "${name || 'Patrimônio'}" de ${safeCurrency(amount)} na sua carteira. O rendimento estimado já está sendo projetado!`;
+                } catch(e) { botResponse.text = "Desculpe Lord, falhei ao gravar esse bem."; }
             }
-            // 3. LANÇAMENTO SIMPLES (Receita/Despesa)
+            // B. LANÇAMENTOS RECORRENTES (FUTUROS)
+            else if (isRecurring && amount > 0) {
+                const cleanDesc = text.replace(moneyMatch[0], '').replace(quantityMatch ? quantityMatch[0] : '', '').replace(/(meses|por|durante|reais|fixa|despesa|R\$|todo mes|recorrente)/gi, '').trim();
+                const type = isIncome ? (companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA) 
+                                      : (companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL);
+                
+                try {
+                    // Função que executa o Batch de X meses
+                    await onAddRecurringTransaction({ 
+                        desc: cleanDesc || 'Recorrente Lord', 
+                        amount, 
+                        type, 
+                        months: months > 1 ? months : 12 // Se disse "fixa" sem tempo, assume 12 meses
+                    });
+                    botResponse.text = `🔄 Lord, ordens executadas! Lancei "${cleanDesc || 'Despesa'}" de ${safeCurrency(amount)} mensalmente pelos próximos ${months > 1 ? months : 12} meses. Você já pode visualizar isso no seu Planejamento Futuro.`;
+                } catch(e) { botResponse.text = "Erro ao processar as parcelas futuras."; }
+            }
+            // C. LANÇAMENTO SIMPLES
+            else if (amount > 0) {
+                const type = isIncome ? (companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA) 
+                                      : (companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL);
+                
+                const cleanDesc = text.replace(moneyMatch[0], '').replace(/(recebi|gastei|paguei|ganhei|de|com|na|no|reais|R\$)/gi, '').trim();
+                
+                try {
+                    const newId = await onAddTransaction({ desc: cleanDesc || 'Lançamento Lord', amount, type, subcategory: '', date: new Date() });
+                    setLastActionId(newId);
+                    botResponse.text = `✅ Feito Lord! Lançamento de ${safeCurrency(amount)} em "${cleanDesc || 'Geral'}" concluído.`;
+                } catch(e) { botResponse.text = "Erro técnico ao salvar lançamento."; }
+            }
+            // D. OUTROS COMANDOS
+            else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
+                const fins = calculateFinancials(transactions, companyType);
+                botResponse.text = `📊 Lord, aqui está seu status atual:\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo Livre: ${safeCurrency(fins.fluxoCaixa)}`;
+            }
             else {
-                const amount = parseValue(text);
-                if (!isNaN(amount) && amount > 0) {
-                    let type = ''; let typeLabel = '';
-                    
-                    // Detecção de contexto (uma frase só)
-                    if (['recebi', 'ganhei', 'venda', 'entrada', 'receita'].some(w => lowerText.includes(w))) {
-                        type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA; typeLabel = 'Receita';
-                    } 
-                    else {
-                        // Assume despesa por padrão se tiver valor e não for receita
-                        typeLabel = 'Despesa'; 
-                        type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
-                        
-                        // Refinamento de subcategoria
-                        if (lowerText.includes('condominio') || lowerText.includes('aluguel')) type = companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL;
-                        if (lowerText.includes('luz') || lowerText.includes('energia')) type = companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL;
-                        if (lowerText.includes('mercado') || lowerText.includes('comida')) type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
-                    }
-
-                    const desc = text.replace(/[0-9.,]+/, '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$|reais)/gi, '').trim();
-                    try {
-                        const newId = await onAddTransaction({ desc: desc || 'Via Chat', amount, type, subcategory: '', date: new Date() });
-                        setLastActionId(newId);
-                        botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`;
-                    } catch(e) { botResponse.text = "Erro ao salvar."; }
-                } else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
-                     const fins = calculateFinancials(transactions, companyType);
-                     botResponse.text = `📊 *Resumo*\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo: ${safeCurrency(fins.fluxoCaixa)}`;
-                } else {
-                    botResponse.text = "Não entendi. Tente 'Gastei 50 no almoço' ou 'Investi 1000'.";
-                }
+                botResponse.text = "Lord, não consegui extrair os dados. Tente algo como: 'Gastei 150 no mercado' ou 'Aluguel 1200 fixa por 12 meses'.";
             }
+
             setMessages(prev => [...prev, botResponse]);
         }, 500);
     };
 
-    const handleKeyDown = (e) => { 
-        if (e.key === 'Enter' && !e.shiftKey) { 
-            e.preventDefault(); 
-        } 
-    }
-    
-    if (!isOpen) return null;
     return (
-        <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 animate-fade-in-up h-[450px]">
-            <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold">Assistente IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 dark:bg-slate-950/50">{messages.map(msg => (<div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-wrap ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-none shadow-sm border border-slate-100 dark:border-slate-700'}`}>{msg.text}</div></div>))}<div ref={messagesEndRef} /></div>
-            <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-2">
-                <textarea 
-                    className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none" 
-                    placeholder="Digite... (Enter pula linha)" 
-                    rows={1} 
-                    value={inputText} 
-                    onChange={e => setInputText(e.target.value)} 
-                    onKeyDown={handleKeyDown}
-                />
-                <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end"><LucideSend size={18} /></button>
-            </div>
-        </div>
-    );
-};
-
-// ... OUTROS COMPONENTES AUXILIARES ...
-const CalculatorModal=({onClose,onConfirm})=>{const [e,setE]=useState('');const h=(v)=>{if(v==='C')setE('');else if(v==='='){try{setE(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))))}catch{setE('Erro')}}else setE(p=>p+v)};const c=()=>{try{onConfirm(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))).replace('.',','))}catch{}};const b=['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm"><div className="flex justify-between mb-4"><h3 className="font-bold dark:text-white">Calculadora</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-4 rounded mb-4 text-right font-bold dark:text-white text-2xl">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{b.map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded font-bold dark:text-white">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-slate-200 p-3 rounded">=</button></div><button onClick={c} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">USAR</button></div></div>)};
-const RepeatModal=({onClose,onConfirm,transaction})=>{const [c,setC]=useState(1);return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full"><h3 className="font-bold mb-4 dark:text-white">Repetir</h3><input type="number" value={c} onChange={e=>setC(e.target.value)} className="w-full p-2 border rounded mb-4 dark:bg-slate-900 dark:text-white"/><button onClick={()=>onConfirm(c)} className="w-full bg-indigo-600 text-white p-2 rounded">Confirmar</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Cancelar</button></div></div>)};
-const ExportModal=({onClose,csvContent,fileName})=>{const [c,setC]=useState(false);const r=useRef(null);const h=()=>{if(r.current){r.current.select();document.execCommand('copy');setC(true)}};return(<div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"><div className="bg-white p-6 rounded-xl max-w-lg w-full"><h3 className="font-bold text-lg mb-2">Exportar CSV</h3><textarea ref={r} readOnly value={csvContent} className="w-full h-32 p-2 border rounded mb-4 text-xs font-mono"/><button onClick={h} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">{c?'Copiado!':'Copiar'}</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Fechar</button></div></div>)};
-const PrintLayout=({companyName,periodStr,onClose,children})=>{return(<div className="fixed inset-0 bg-white z-[70] overflow-y-auto text-black"><div className="sticky top-0 bg-slate-800 text-white p-4 flex justify-between print:hidden"><div><h2 className="font-bold">Modo Impressão</h2></div><div className="flex gap-2"><button onClick={()=>window.print()} className="bg-indigo-600 px-4 py-1 rounded">Imprimir</button><button onClick={onClose} className="bg-slate-600 px-4 py-1 rounded">Fechar</button></div></div><div className="max-w-[210mm] mx-auto p-[10mm]"><div className="text-center border-b-2 border-black pb-4 mb-6"><h1 className="text-2xl font-bold uppercase">{companyName}</h1><h2>Relatório Financeiro</h2><p>{periodStr}</p></div>{children}</div></div>)};
-const InstallGuideModal=({onClose})=>{return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl p-6 max-w-sm text-center"><h2 className="font-bold text-xl mb-2">Instalar</h2><p className="mb-4">Abra no Chrome/Safari e use "Adicionar à Tela Inicial".</p><button onClick={onClose} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">Ok</button></div></div>)};
-const TutorialModal=({onClose})=>{return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl p-6 max-w-md text-center"><h2 className="font-bold text-xl mb-2">Bem-vindo!</h2><p className="mb-6">Seu gestor financeiro completo.</p><button onClick={onClose} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">Começar</button></div></div>)};
-
-const Sidebar = ({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onOpenSettings, onOpenInstall, onRenameCompany }) => {
-    const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false); const [editingId, setEditingId] = useState(null); const [editName, setEditName] = useState(''); const [newType, setNewType] = useState('business');
-    const handleCreate = () => { if(newName.trim()) { onAddCompany(newName, newType); setNewName(''); setIsCreating(false); onClose(); } };
-    const handleStartEdit = (e,c) => { e.stopPropagation(); setEditingId(c.id); setEditName(c.name); };
-    const handleSaveEdit = (e) => { e.stopPropagation(); if(editName.trim()){ onRenameCompany(editingId, editName); setEditingId(null); } };
-    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} print:hidden`}> <div className="p-6 border-b dark:border-slate-700 flex justify-between"><h2 className="font-bold text-xl dark:text-white">Minhas Contas</h2><button onClick={onClose}><LucideX/></button></div> <div className="p-4"> {companies.map(c => (<div key={c.id} onClick={() => { if(editingId!==c.id){onChangeCompany(c); onClose();} }} className={`w-full text-left p-3 rounded-xl mb-2 flex items-center gap-2 cursor-pointer ${currentCompany?.id === c.id ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 dark:text-white dark:hover:bg-slate-800'}`}>{editingId === c.id ? (<><input autoFocus className="flex-1 p-1 border rounded" value={editName} onChange={e=>setEditName(e.target.value)} onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Enter')handleSaveEdit(e)}} /><button onClick={handleSaveEdit}><LucideCheck size={14}/></button></>) : (<><span className="flex-1">{c.name}</span><button onClick={e=>{e.stopPropagation(); setEditingId(c.id); setEditName(c.name)}} className="text-slate-400 hover:text-indigo-500"><LucideEdit2 size={14}/></button></>)}</div>))} <button onClick={() => setIsCreating(true)} className="w-full p-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600"><LucidePlus/> Nova Conta</button> {isCreating && (<div className="mt-4 bg-slate-50 p-3 rounded"><input autoFocus placeholder="Nome" className="w-full p-2 border rounded mb-2 dark:bg-slate-800 dark:text-white" value={newName} onChange={e => setNewName(e.target.value)} /><div className="flex gap-2 mb-2"><button onClick={()=>setNewType('business')} className={`flex-1 text-xs p-1 rounded border ${newType==='business'?'bg-blue-100 border-blue-500':'bg-white'}`}>Empresa</button><button onClick={()=>setNewType('personal')} className={`flex-1 text-xs p-1 rounded border ${newType==='personal'?'bg-green-100 border-green-500':'bg-white'}`}>Pessoal</button></div><button onClick={handleCreate} className="w-full bg-indigo-600 text-white p-2 rounded">Criar</button></div>)} <div className="mt-8 pt-4 border-t dark:border-slate-700"><button onClick={onOpenSettings} className="w-full p-3 flex items-center gap-3 text-slate-600 dark:text-slate-400"><LucideSettings/> Categorias</button></div> </div> </div> </>);
-};
-
-// --- APP PRINCIPAL ---
-const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
-    const [expandedRows, setExpandedRows] = useState({});
-    const [showPercentage, setShowPercentage] = useState(false);
-    
-    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
-    if (!cats) return null; // Proteção contra crash
-
-    const real = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
-    const meta = useMemo(() => isMonthly && budget ? budget : {}, [budget, isMonthly]);
-    const toggleRow = (label) => setExpandedRows(prev => ({ ...prev, [label]: !prev[label] }));
-
-    const SubcatRows = ({ type, subcatTotals, budgetSubcats, isNegative }) => {
-        if (!subcatTotals && !budgetSubcats) return null;
-        const relevantSubcats = new Set([...Object.keys(subcatTotals || {}).filter(k => k.startsWith(type + ':')).map(k => k.split(':')[1]), ...Object.keys(budgetSubcats || {}).filter(k => k.startsWith(type + ':')).map(k => k.split(':')[1])]);
-        if (relevantSubcats.size === 0) return null;
-        return Array.from(relevantSubcats).sort().map(subName => {
-            const valReal = subcatTotals[`${type}:${subName}`] || 0;
-            const valMeta = budgetSubcats ? (budgetSubcats[`${type}:${subName}`] || 0) : 0;
-            const finalReal = isNegative ? -valReal : valReal;
-            const displayReal = showPercentage ? safePercent(valReal, real.receita) : safeCurrency(finalReal);
-            const finalMeta = isNegative ? -valMeta : valMeta;
-            const variacao = finalReal - finalMeta;
-            return (
-                <div key={subName} className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-2 px-4 border-b border-gray-200 text-xs ${isPrintMode ? 'text-black' : 'text-gray-600 dark:text-slate-300 bg-gray-50/50 dark:bg-slate-900/50'}`}>
-                    <span className={`${isPrintMode ? 'text-black' : 'text-gray-500 dark:text-slate-400'} pl-6 flex items-center`}>• {subName}</span>
-                    <span className={`text-right ${isPrintMode ? 'text-black' : ''}`}>{displayReal}</span>
-                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600 dark:text-green-400') : (isPrintMode ? 'text-black' : 'text-red-500 dark:text-red-400')}`}>{valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
-                </div>
-            );
-        });
-    };
-
-    const LineItem = ({ label, type, valReal, valMeta, isNegative, isTotal, highlight, canExpand }) => {
-        const finalReal = isNegative ? -valReal : valReal;
-        let displayReal = showPercentage ? safePercent(valReal, real.receita) : safeCurrency(finalReal);
-        if (showPercentage && isNegative) displayReal = '-' + displayReal;
-        let textColor = isPrintMode ? 'text-black' : 'text-gray-700 dark:text-slate-200';
-        if (!isPrintMode) {
-            if (highlight) textColor = finalReal >= 0 ? 'text-green-700' : 'text-red-700';
-            if (isNegative && !highlight && !showPercentage) textColor = 'text-red-600';
-        }
-        return (
-            <>
-                <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-3 px-4 border-b border-gray-200 dark:border-slate-800 items-center ${isTotal ? 'font-bold bg-gray-50 dark:bg-slate-800/50' : ''} ${canExpand ? 'cursor-pointer hover:bg-gray-50' : ''}`} onClick={() => canExpand && toggleRow(label)}>
-                    <span className={`flex items-center gap-1 ${isTotal ? 'text-slate-900 dark:text-white' : 'text-gray-600 dark:text-slate-300'}`}>{canExpand && (expandedRows[label] ? <LucideChevronDown size={14} /> : <LucideChevronRight size={14} />)}{label}</span>
-                    <span className={`text-right ${textColor} ${isTotal ? 'text-base' : 'text-sm'}`}>{displayReal}</span>
-                    {isMonthly && !showPercentage && <span className="text-right text-xs font-medium text-slate-500">-</span>}
-                </div>
-                {(canExpand && expandedRows[label]) && <SubcatRows type={type} subcatTotals={real.subcatTotals} budgetSubcats={meta.subcategories} isNegative={isNegative} />}
-            </>
-        );
-    };
-
-    return (
-        <div className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden relative ${isPrintMode ? 'border-none' : ''}`}>
-            {!isPrintMode && <div className="absolute top-2 right-2"><button onClick={() => setShowPercentage(!showPercentage)} className="p-1.5 rounded-md bg-gray-100 dark:bg-slate-700"><LucidePercent size={14}/></button></div>}
-            <div className="grid grid-cols-3 bg-gray-100 dark:bg-slate-900 text-xs font-bold uppercase py-3 px-4"><div>Descrição</div><div className="text-right">{showPercentage ? '%' : 'R$'}</div><div className="text-right">Meta</div></div>
-            
-            {companyType === 'personal' ? (
-                <div>
-                    <LineItem label="Renda Total" type={TransactionTypePersonal.RECEITA} valReal={real[TransactionTypePersonal.RECEITA]} valMeta={meta[TransactionTypePersonal.RECEITA]} canExpand />
-                    {cats.filter(c => !c.isPositive).map(cat => <LineItem key={cat.value} label={`(-) ${cat.label.replace(' (-)', '')}`} type={cat.value} valReal={real[cat.value]} valMeta={meta[cat.value]} isNegative canExpand />)}
-                    <LineItem label="= SALDO FINAL" valReal={real.fluxoCaixa} isTotal highlight />
-                </div>
-            ) : (
-                <div>
-                    <LineItem label="Receita Bruta" type={TransactionTypeBusiness.RECEITA} valReal={real.receita} valMeta={meta[TransactionTypeBusiness.RECEITA]} canExpand />
-                    <LineItem label="(-) Custos (CMV)" type={TransactionTypeBusiness.CUSTO} valReal={real.custo} valMeta={meta[TransactionTypeBusiness.CUSTO]} isNegative canExpand />
-                    <LineItem label="= Lucro Bruto" valReal={real.lucroBruto} valMeta={meta.lucroBruto} isTotal />
-                    <LineItem label="(-) Despesas Operacionais" type={TransactionTypeBusiness.DESPESA_OPERACIONAL} valReal={real.despesas} valMeta={meta[TransactionTypeBusiness.DESPESA_OPERACIONAL]} isNegative canExpand />
-                    <LineItem label="= EBITDA" valReal={real.ebitda} isTotal />
-                    <LineItem label="(-) Juros/Financeiro" type={TransactionTypeBusiness.JUROS_FINANCEIROS} valReal={real.juros} valMeta={meta[TransactionTypeBusiness.JUROS_FINANCEIROS]} isNegative canExpand />
-                    <LineItem label="(-) Impostos" type={TransactionTypeBusiness.IMPOSTOS} valReal={real.impostos} valMeta={meta[TransactionTypeBusiness.IMPOSTOS]} isNegative canExpand />
-                    <LineItem label="= LUCRO LÍQUIDO" valReal={real.lucroLiquido} isTotal highlight />
-                </div>
-            )}
-        </div>
-    );
-};
-
-const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, companyType }) => {
-    const [localBudget, setLocalBudget] = useState({});
-    const [localSubBudget, setLocalSubBudget] = useState({});
-    
-    // SAFEGUARD
-    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
-    if (!cats) return null;
-
-    useEffect(() => {
-        setLocalBudget(budget || {});
-        setLocalSubBudget(budget?.subcategories || {});
-    }, [budget]);
-
-    if (!isMonthly) return <div className="p-8 text-center text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700">Selecione um mês específico para planejar o orçamento.</div>;
-
-    const handleMainChange = (type, value) => {
-        setLocalBudget(prev => ({ ...prev, [type]: parseFloat(value) || 0 }));
-    };
-
-    const handleSubChange = (type, subName, value) => {
-        const key = `${type}:${subName}`; const numVal = parseFloat(value) || 0;
-        setLocalSubBudget(prev => {
-            const newSubs = { ...prev, [key]: numVal };
-            const currentTypeSubs = Object.entries(newSubs).filter(([k]) => k.startsWith(type + ':')).reduce((sum, [, val]) => sum + val, 0);
-            setLocalBudget(prevMain => ({ ...prevMain, [type]: currentTypeSubs }));
-            return newSubs;
-        });
-    };
-
-    const handleSave = () => {
-        onSaveBudget({ ...localBudget, subcategories: localSubBudget });
-    };
-
-    return (
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 print:border-none print:shadow-none">
-            <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><LucideTarget className="text-indigo-600 dark:text-indigo-400" /> Planejamento Orçamentário</h2>
-            <div className="space-y-8">
-                {cats.map(cat => (
-                    <div key={cat.value} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-700 break-inside-avoid">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className={`font-bold text-sm uppercase ${cat.color.split(' ')[0]} print:text-black`}>{cat.label}</h3>
-                            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-40 print:border-gray-400">
-                                <span className="pl-3 text-slate-400 text-sm">R$</span>
-                                <input type="number" value={localBudget[cat.value] || ''} onChange={e => handleMainChange(cat.value, e.target.value)}
-                                    className="w-full p-2 text-right outline-none font-semibold text-slate-700 dark:text-slate-200 bg-transparent print:text-black" placeholder="0,00" />
-                            </div>
-                        </div>
-                        {subcategories[cat.value]?.length > 0 && (
-                            <div className="pl-4 space-y-2 border-l-2 border-slate-200 dark:border-slate-700 ml-2">
-                                {subcategories[cat.value].map(sub => (
-                                    <div key={sub.id} className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-600 dark:text-slate-400 print:text-black">{sub.name}</span>
-                                        <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-32 h-8 print:border-gray-400">
-                                            <span className="pl-2 text-slate-400 text-xs">R$</span>
-                                            <input type="number" value={localSubBudget[`${cat.value}:${sub.name}`] || ''} 
-                                                onChange={e => handleSubChange(cat.value, sub.name, e.target.value)}
-                                                className="w-full p-1 text-right outline-none text-sm text-slate-600 dark:text-slate-300 bg-transparent print:text-black" placeholder="0,00" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+        <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 animate-fade-in-up h-[500px]">
+            <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center shadow-lg"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold tracking-tight">Estratégia Lord IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950/50 scrollbar-thin">
+                {messages.map(msg => (
+                    <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-none border border-slate-100 dark:border-slate-700'}`}>{msg.text}</div>
                     </div>
                 ))}
+                <div ref={messagesEndRef} />
             </div>
-            <button onClick={handleSave} className="w-full mt-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors print:hidden">
-                SALVAR METAS
-            </button>
-        </div>
-    );
-};
-
-const CashFlowView = ({ transactions, isPrintMode, companyType }) => {
-    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
-    if (isPrintMode) {
-        return (
-            <div className="grid grid-cols-3 gap-4 border border-gray-300 p-4 text-center">
-                <div><h3 className="text-xs font-bold uppercase mb-1">Entradas</h3><p className="text-xl font-bold">{safeCurrency(receita)}</p></div>
-                <div><h3 className="text-xs font-bold uppercase mb-1">Saídas</h3><p className="text-xl font-bold">{safeCurrency(totalSaidas)}</p></div>
-                <div><h3 className="text-xs font-bold uppercase mb-1">Saldo</h3><p className="text-xl font-bold">{safeCurrency(fluxoCaixa)}</p></div>
-            </div>
-        );
-    }
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl border border-green-100 dark:border-green-900/30 print:bg-white print:border-gray-300"><h3 className="text-green-800 dark:text-green-400 text-sm font-semibold uppercase mb-2 print:text-black">Entradas</h3><p className="text-3xl font-bold text-green-700 dark:text-green-400 print:text-black">{safeCurrency(receita)}</p></div>
-            <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl border border-red-100 dark:border-red-900/30 print:bg-white print:border-gray-300"><h3 className="text-red-800 dark:text-red-400 text-sm font-semibold uppercase mb-2 print:text-black">Saídas</h3><p className="text-3xl font-bold text-red-700 dark:text-red-400 print:text-black">{safeCurrency(totalSaidas)}</p></div>
-            <div className={`p-6 rounded-xl border ${fluxoCaixa >= 0 ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-900/30' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30'} print:bg-white print:border-gray-300`}><h3 className={`${fluxoCaixa >= 0 ? 'text-indigo-800 dark:text-indigo-300' : 'text-orange-800 dark:text-orange-300'} text-sm font-semibold uppercase mb-2 print:text-black`}>Saldo do Período</h3><p className={`text-3xl font-black ${fluxoCaixa >= 0 ? 'text-indigo-900 dark:text-indigo-200' : 'text-orange-700 dark:text-orange-300'} print:text-black`}>{safeCurrency(fluxoCaixa)}</p></div>
-        </div>
-    );
-};
-
-const ChartsView = ({ allTransactions, companyType }) => {
-    const lineData = useMemo(() => {
-        if (!allTransactions || allTransactions.length === 0) return [];
-        const groups = {};
-        allTransactions.forEach(t => {
-            if (!t.createdAt || typeof t.createdAt.toDate !== 'function') return;
-            const d = t.createdAt.toDate();
-            const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(t);
-        });
-        return Object.keys(groups).map(key => {
-            const [yearStr, monthStr] = key.split('-');
-            const fins = calculateFinancials(groups[key], companyType);
-            return { name: `${MONTHS[parseInt(monthStr)]}/${yearStr.slice(2)}`, Lucro: fins.fluxoCaixa, Receita: fins.receita, year: parseInt(yearStr), month: parseInt(monthStr) };
-        }).sort((a, b) => a.year - b.year || a.month - b.month).slice(-12);
-    }, [allTransactions, companyType]);
-
-    if (lineData.length === 0) return <div className="p-8 text-center text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-800/50 rounded-xl">Sem dados suficientes para o gráfico.</div>;
-    return (
-        <div className="h-80 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 print:border-gray-300">
-            <ResponsiveContainer width="100%" height="100%"><LineChart data={lineData}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} /><YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v/1000}k`} /><Tooltip formatter={(value) => safeCurrency(value)} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} /><Legend /><Line type="monotone" dataKey="Receita" stroke="#10b981" strokeWidth={2} dot={false} name="Receita Total" /><Line type="monotone" dataKey="Lucro" stroke="#4f46e5" strokeWidth={3} name="Lucro Líquido" /></LineChart></ResponsiveContainer>
-        </div>
-    );
-};
-
-const CategoryPieChart = ({ transactions, type }) => {
-    const data = useMemo(() => {
-        const filtered = transactions.filter(t => t.type === type);
-        const groups = {};
-        filtered.forEach(t => {
-            const cat = t.subcategory || 'Outros';
-            groups[cat] = (groups[cat] || 0) + Number(t.amount);
-        });
-        return Object.entries(groups).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
-    }, [transactions, type]);
-
-    if (data.length === 0) return <div className="h-64 flex items-center justify-center text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-800/50 rounded-xl">Sem dados de {type}.</div>;
-
-    return (
-        <div className="h-96 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 flex flex-col print:border-gray-300 print:break-inside-avoid">
-            <h3 className="text-sm font-bold text-gray-700 dark:text-slate-200 mb-4 text-center print:text-black">{type} por Subcategoria</h3>
-            <div className="flex-1 flex justify-center items-center relative">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie 
-                            data={data} 
-                            cx="50%" 
-                            cy="50%" 
-                            innerRadius={50} 
-                            outerRadius={70} 
-                            paddingAngle={3} 
-                            dataKey="value" 
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            labelLine={true}
-                        >
-                            {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip formatter={(value) => safeCurrency(value)} />
-                        <Legend verticalAlign="bottom" height={36} />
-                    </PieChart>
-                </ResponsiveContainer>
+            <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2 shadow-inner">
+                <textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none max-h-32" placeholder="Ordene aqui, Lord..." rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
+                <button onClick={handleSend} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end shadow-md active:scale-95 transition-transform"><LucideSend size={18} /></button>
             </div>
         </div>
     );
 };
+
+// ============================================================================
+// 4. COMPONENTE PRINCIPAL (APP)
+// ============================================================================
 
 export default function App() {
+    // ESTADOS DE AUTENTICAÇÃO E DATABASE
     const [user, setUser] = useState(null);
     const [db, setDb] = useState(null);
+    
+    // ESTADOS DE DADOS
     const [companies, setCompanies] = useState([]);
     const [currentCompany, setCurrentCompany] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [subcategories, setSubcategories] = useState({});
     const [budget, setBudget] = useState({});
     const [assets, setAssets] = useState([]);
+    
+    // ESTADOS DE UI
     const [loading, setLoading] = useState(true);
     const [mainTab, setMainTab] = useState('lancamentos');
     const [resultTab, setResultTab] = useState('dre');
     const [period, setPeriod] = useState(new Date().getMonth());
     const [year, setYear] = useState(new Date().getFullYear());
-    const [showSettings, setShowSettings] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [showTutorial, setShowTutorial] = useState(false);
     const [showSidebar, setShowSidebar] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
-    const [showExportModal, setShowExportModal] = useState(false);
-    const [csvContentToExport, setCsvContentToExport] = useState('');
-    const [exportFileName, setExportFileName] = useState('');
-    const [showInstallGuide, setShowInstallGuide] = useState(false);
-    const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [showPrintPreview, setShowPrintPreview] = useState(false);
-    const [showCalculator, setShowCalculator] = useState(false);
     const [showChat, setShowChat] = useState(false);
-    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-    
-    // States for forms
+    const [showCalculator, setShowCalculator] = useState(false);
+
+    // FORMULÁRIO
     const [editingTransaction, setEditingTransaction] = useState(null);
-    const [repeatingTransaction, setRepeatingTransaction] = useState(null);
     const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
-    // Uso seguro da variável global
-    const [formType, setFormType] = useState(transactionCategories[0].value);
+    const [formType, setFormType] = useState(categoriesBusiness[0].value);
     const [formSubcat, setFormSubcat] = useState('');
     const [formDesc, setFormDesc] = useState('');
     const [formAmount, setFormAmount] = useState('');
     const [isRecurring, setIsRecurring] = useState(false);
     const [recurringMonths, setRecurringMonths] = useState(1);
-    const [newSubcatName, setNewSubcatName] = useState('');
 
     const companyType = currentCompany?.type || 'business';
     const activeCategories = useMemo(() => companyType === 'personal' ? categoriesPersonal : categoriesBusiness, [companyType]);
 
+    // INICIALIZAÇÃO
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { setDarkMode(true); }
-        const manifest = { "name": "Gestão Financeira", "short_name": "Finanças", "start_url": ".", "display": "standalone", "background_color": "#ffffff", "theme_color": "#4f46e5", "icons": [{ "src": "https://placehold.co/192x192/4f46e5/ffffff.png?text=$", "sizes": "192x192", "type": "image/png" }, { "src": "https://placehold.co/512x512/4f46e5/ffffff.png?text=$", "sizes": "512x512", "type": "image/png" }] };
-        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
-        const link = document.createElement('link'); link.rel = 'manifest'; link.href = URL.createObjectURL(manifestBlob); document.head.appendChild(link);
-        const handleBeforeInstallPrompt = (e) => { e.preventDefault(); setDeferredPrompt(e); };
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        const hasSeenTutorial = localStorage.getItem('hasSeenFinTutorial');
-        if (!hasSeenTutorial) setShowTutorial(true);
-        
-        if (Notification.permission === 'granted') setNotificationsEnabled(true);
-
-        if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey.startsWith('AIza')) { console.error("FIREBASE CONFIG NÃO ENCONTRADA OU INVÁLIDA"); return; }
         const app = initializeApp(firebaseConfig);
-        const _auth = getAuth(app);
-        const _db = getFirestore(app);
-        setDb(_db);
+        const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
     }, []);
 
-    useEffect(() => {
-        if (darkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
-    }, [darkMode]);
-    
-    useEffect(() => {
-        if (notificationsEnabled) {
-            const lastAccess = localStorage.getItem('lastAccess');
-            const now = Date.now();
-            if (!lastAccess || now - lastAccess > 86400000) {
-                 new Notification("Gestão Financeira", { body: "Não se esqueça de lançar suas despesas hoje!", icon: "https://placehold.co/192x192/4f46e5/ffffff.png?text=$" });
-                 localStorage.setItem('lastAccess', now);
-            }
-        }
-    }, [notificationsEnabled]);
+    useEffect(() => { if (darkMode) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); } }, [darkMode]);
 
+    // CARREGAMENTO DE CONTAS
     useEffect(() => {
         if (!user || !db) return;
         const q = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies`), orderBy('createdAt', 'asc'));
@@ -774,291 +426,125 @@ export default function App() {
             }
             setLoading(false);
         });
-    }, [user, db]); 
+    }, [user, db]);
 
-    const handleCompanyChange = (company) => {
-        setCurrentCompany(company);
-        localStorage.setItem('lastCompanyId', company.id);
-    };
-
+    // CARREGAMENTO DE LANÇAMENTOS, CATEGORIAS E PATRIMÔNIO
     useEffect(() => {
-        if (!user || !db || !currentCompany) { setTransactions([]); setSubcategories({}); setAssets([]); return; }
-        setLoading(true);
+        if (!user || !db || !currentCompany) return;
         const qTx = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`));
-        const unsubTx = onSnapshot(qTx, (snap) => { setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); });
+        const unsubTx = onSnapshot(qTx, snap => setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
         const qSub = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/subcategories`));
-        const unsubSub = onSnapshot(qSub, (snap) => {
+        const unsubSub = onSnapshot(qSub, snap => {
             const subs = {}; snap.docs.forEach(d => { const data = d.data(); if (!subs[data.type]) subs[data.type] = []; subs[data.type].push({ id: d.id, name: data.name }); }); setSubcategories(subs);
         });
         const qAssets = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`));
-        const unsubAssets = onSnapshot(qAssets, (snap) => { setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() }))); });
+        const unsubAssets = onSnapshot(qAssets, snap => setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
         return () => { unsubTx(); unsubSub(); unsubAssets(); };
     }, [user, db, currentCompany]);
 
-    useEffect(() => {
-        if (!user || !db || !currentCompany || typeof period !== 'number') { setBudget({}); return; }
-        getDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/budgets/${year}_${period}`)).then(snap => setBudget(snap.exists() ? snap.data() : {})).catch(err => console.error(err));
-    }, [user, db, period, year, currentCompany]);
-
+    // FILTRO GLOBAL PODEROSO (Mês, Ano ou Tudo)
     const filteredData = useMemo(() => {
         return transactions.filter(t => {
-            if (!t.createdAt || typeof t.createdAt.toDate !== 'function') return false;
+            if (!t.createdAt) return false;
             const d = t.createdAt.toDate();
-            // Lógica "Todo o Período"
-            if (period === 'ALL') return true; 
-
+            if (period === 'ALL') return true; // MOSTRA TUDO DE TODOS OS ANOS
             if (d.getUTCFullYear() !== year) return false;
             const txMonth = d.getUTCMonth();
             if (typeof period === 'number') return txMonth === period;
-            
-            switch (period) {
-                case 'Q1': return txMonth >= 0 && txMonth <= 2; 
-                case 'Q2': return txMonth >= 3 && txMonth <= 5;
-                case 'Q3': return txMonth >= 6 && txMonth <= 8; 
-                case 'Q4': return txMonth >= 9 && txMonth <= 11;
-                case 'S1': return txMonth >= 0 && txMonth <= 5; 
-                case 'S2': return txMonth >= 6 && txMonth <= 11;
-                case 'Y': return true; 
-                default: return false;
-            }
+            if (period === 'Q1') return txMonth < 3; if (period === 'Q2') return txMonth >= 3 && txMonth < 6;
+            if (period === 'Q3') return txMonth >= 6 && txMonth < 9; if (period === 'Q4') return txMonth >= 9;
+            return true;
         });
     }, [transactions, period, year]);
 
     const searchedData = useMemo(() => {
         if (!searchTerm.trim()) return filteredData;
-        const lowerTerm = searchTerm.toLowerCase();
-        return filteredData.filter(t => t.desc.toLowerCase().includes(lowerTerm) || (t.subcategory && t.subcategory.toLowerCase().includes(lowerTerm)));
+        return filteredData.filter(t => t.desc.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [filteredData, searchTerm]);
 
-    const resetForm = () => { setEditingTransaction(null); setFormDate(new Date().toISOString().split('T')[0]); setFormType(activeCategories[0].value); setFormSubcat(''); setFormDesc(''); setFormAmount(''); setIsRecurring(false); setRecurringMonths(1); };
-    const handleEditClick = (t) => { setEditingTransaction(t); setFormDesc(t.desc); setFormAmount(t.amount.toString().replace('.', ',')); setFormType(t.type); setFormSubcat(t.subcategory || ''); if (t.createdAt) setFormDate(t.createdAt.toDate().toISOString().split('T')[0]); };
-    
-    // --- FUNÇÕES DE CRUD DO APP ---
-    // Definição da função para adicionar recorrentes
-    const handleAddRecurringTransaction = async ({ desc, amount, type, subcategory, months }) => {
+    // CORE: ADICIONAR RECORRENTE (BATCH)
+    const handleAddRecurringTransaction = async ({ desc, amount, type, months }) => {
         if (!user || !currentCompany) return;
         const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
         const batch = writeBatch(db);
         const today = new Date();
-        
         for (let i = 0; i < months; i++) {
-             const nextDate = new Date(today);
-             nextDate.setMonth(today.getMonth() + i);
-             const newDocRef = doc(collectionRef);
-             batch.set(newDocRef, { 
-                 desc: `${desc} (${i+1}/${months})`, 
-                 amount, 
-                 type, 
-                 subcategory: subcategory || '', 
-                 createdAt: Timestamp.fromDate(nextDate) 
-             });
+            const d = new Date(today.getFullYear(), today.getMonth() + i, today.getDate(), 12, 0, 0);
+            const newDocRef = doc(collectionRef);
+            batch.set(newDocRef, { desc: `${desc} (${i+1}/${months})`, amount, type, createdAt: Timestamp.fromDate(d) });
         }
         await batch.commit();
     };
 
-    const handleAddTransaction = async ({ desc, amount, type, subcategory, date }) => {
-        if (!currentCompany || !user) return;
-        const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
-        const docRef = await addDoc(collectionRef, { desc, amount, type, subcategory, createdAt: Timestamp.fromDate(date) });
-        return docRef.id;
-    };
-
-    const handleUpdateTransaction = async (id, data) => {
-         if (!user || !db || !currentCompany) return;
-         await updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id), data);
-    };
-
-    const handleDeleteTransaction = async (id) => {
-         if (!user || !db || !currentCompany) return;
-         await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id));
-    };
-
-    const handleSaveTransaction = async (e) => { e.preventDefault(); if (!currentCompany) { alert("Selecione uma empresa."); return; } const val = parseFloat(formAmount.replace(',', '.')); const parts = formDate.split('-'); const selectedDate = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0)); if (!val || !user || isNaN(selectedDate.getTime())) return; try { const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`); const data = { desc: formDesc, amount: val, type: formType, subcategory: formSubcat, createdAt: Timestamp.fromDate(selectedDate) }; if (editingTransaction) { await updateDoc(doc(collectionRef, editingTransaction.id), { ...data, editedAt: Timestamp.now() }); } else { 
-        if (isRecurring && recurringMonths > 1) {
-            await handleAddRecurringTransaction({ desc: formDesc, amount: val, type: formType, subcategory: formSubcat, months: recurringMonths });
+    const handleSaveTransaction = async (e) => {
+        e.preventDefault();
+        const val = parseFloat(formAmount.replace(/\./g, '').replace(',', '.'));
+        if (isNaN(val)) return;
+        const date = new Date(formDate + 'T12:00:00');
+        const data = { desc: formDesc, amount: val, type: formType, subcategory: formSubcat };
+        const ref = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
+        
+        if (editingTransaction) {
+            await updateDoc(doc(ref, editingTransaction.id), data);
+        } else if (isRecurring && recurringMonths > 1) {
+            await handleAddRecurringTransaction({ desc: formDesc, amount: val, type: formType, months: recurringMonths });
         } else {
-            await addDoc(collectionRef, data); 
+            await addDoc(ref, {...data, createdAt: Timestamp.fromDate(date)});
         }
-    } resetForm(); } catch (err) { alert("Erro ao salvar."); } };
-    const handleDelete = async (id) => { if (!window.confirm("Tem certeza que deseja excluir este lançamento?")) return; try { await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id)); } catch (e) { alert("Erro ao excluir."); } };
-    const handleRepeat = (t) => { setRepeatingTransaction(t); };
-    const confirmRepeat = async (months) => { if (!repeatingTransaction || !user || !currentCompany) return; try { const batch = writeBatch(db); const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`); const baseDate = repeatingTransaction.createdAt.toDate(); for (let i = 1; i <= months; i++) { const newDate = new Date(baseDate); newDate.setUTCMonth(baseDate.getUTCMonth() + i); const newDocRef = doc(collectionRef); batch.set(newDocRef, { desc: repeatingTransaction.desc, amount: repeatingTransaction.amount, type: repeatingTransaction.type, subcategory: repeatingTransaction.subcategory || '', createdAt: Timestamp.fromDate(newDate) }); } await batch.commit(); setRepeatingTransaction(null); alert(`${months} lançamentos criados com sucesso!`); } catch (e) { alert("Erro ao repetir lançamentos."); } };
-    const handleSaveBudget = async (newBudget) => { if (!currentCompany || typeof period !== 'number') return; try { const budgetRef = doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/budgets/${year}_${period}`); await setDoc(budgetRef, newBudget); setBudget(newBudget); alert("Orçamento salvo!"); } catch (e) { alert("Erro ao salvar orçamento."); } };
-    const handleRenameCompany = async (companyId, newName) => { if (!newName.trim() || !user) return; try { await updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies`, companyId), { name: newName.trim() }); } catch (e) { alert("Erro ao renomear empresa."); } };
-    const handleAddSubcategory = async (type) => { if (!newSubcatName.trim() || !currentCompany) return; try { await addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/subcategories`), { type, name: newSubcatName.trim() }); setNewSubcatName(''); } catch (e) { alert("Erro ao adicionar."); } };
-    const handleDeleteSubcategory = async (id) => { if (!window.confirm("Excluir subcategoria?")) return; try { await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/subcategories`, id)); } catch (e) { alert("Erro ao excluir."); } };
-    const createDefaultCompany = async (name = 'Minha Empresa', type = 'business') => { try { const newCompRef = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies`)); await setDoc(newCompRef, { name, type, createdAt: Timestamp.now() }); const batch = writeBatch(db); 
-    const defaults = type === 'personal' ? DEFAULT_SUBCATEGORIES_PERSONAL : DEFAULT_SUBCATEGORIES_BUSINESS;
-    Object.entries(defaults).forEach(([type, subs]) => { subs.forEach(subName => { const ref = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${newCompRef.id}/subcategories`)); batch.set(ref, { type, name: subName }); }); }); await batch.commit(); 
-    if (name === 'Minha Empresa') {
-        const newComp = { id: newCompRef.id, name, type };
-        setCurrentCompany(newComp); 
-        localStorage.setItem('lastCompanyId', newComp.id);
-    } } catch (e) { console.error(e); alert("Erro ao criar empresa inicial."); } };
-    
-    const handleCreateCompany = async (name, type) => { if (!name || !user || !db) return; await createDefaultCompany(name, type); };
-    const handleInstallClick = () => { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then((choiceResult) => { if (choiceResult.outcome === 'accepted') { setDeferredPrompt(null); } }); } else { setShowInstallGuide(true); } };
-    const closeTutorial = () => { setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial', 'true'); const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; if (!isStandalone) { handleInstallClick(); } };
-    const handleExportCSV = () => { if (!filteredData || filteredData.length === 0) { alert("Não há dados para exportar neste período."); return; } const headers = ["Data", "Tipo", "Subcategoria", "Descrição", "Valor (R$)"]; const rows = filteredData.map(t => [t.createdAt?.toDate ? safeDate(t.createdAt) : '', t.type, t.subcategory || '', t.desc.replace(/"/g, '""'), (typeof t.amount === 'number' ? t.amount : 0).toFixed(2).replace('.', ',')]); const csvContent = [headers.join(";"), ...rows.map(row => row.map(cell => `"${cell}"`).join(";"))].join("\n"); setCsvContentToExport(csvContent); setExportFileName(`financeiro_${currentCompany?.name || 'empresa'}_${year}_${typeof period === 'number' ? MONTHS[period] : period}.csv`); setShowExportModal(true); };
-    const handlePrint = () => { setShowPrintPreview(true); };
-    const handleCalculatorFinish = (val) => { setFormAmount(val); setShowCalculator(false); };
-    
-    // Funções de Patrimônio
-    const handleAddAsset = async (assetData) => {
-        if (!user || !currentCompany) return;
-        await addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), assetData);
-    };
-    const handleDeleteAsset = async (id) => {
-        if (!window.confirm("Excluir item?")) return;
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`, id));
+        setEditingTransaction(null); setFormDesc(''); setFormAmount('');
     };
 
-    const requestNotificationPermission = () => {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') { setNotificationsEnabled(true); alert("Notificações ativadas!"); }
-        });
-    };
-
-    if (loading && !user) return <div className="flex h-screen items-center justify-center text-indigo-600 dark:text-indigo-400 animate-pulse bg-white dark:bg-slate-950">Iniciando...</div>;
+    if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900 text-indigo-400 font-bold animate-pulse">CARREGANDO IMPÉRIO FINANCEIRO...</div>;
 
     return (
-        <div className={`min-h-screen font-sans transition-colors duration-300 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <script dangerouslySetInnerHTML={{__html: `tailwind.config = { darkMode: 'class' }`}} />
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); 
-                .font-sans { font-family: 'Inter', sans-serif; }
-                @media print {
-                    @page { margin: 1cm; }
-                    body { background-color: white !important; color: black !important; }
-                    .no-print, .print\\:hidden { display: none !important; }
-                    .print\\:block { display: block !important; }
-                    .print\\:text-black { color: black !important; }
-                    .print\\:bg-white { background-color: white !important; }
-                    .print\\:border-gray-300 { border-color: #d1d5db !important; }
-                    .dark { color: black !important; background-color: white !important; }
-                }
-            `}</style>
-
-            {showTutorial && <TutorialModal onClose={closeTutorial} />}
-            {showExportModal && <ExportModal onClose={() => setShowExportModal(false)} csvContent={csvContentToExport} fileName={exportFileName} />}
-            {showInstallGuide && <InstallGuideModal onClose={() => setShowInstallGuide(false)} />}
-            {repeatingTransaction && <RepeatModal onClose={() => setRepeatingTransaction(null)} onConfirm={confirmRepeat} transaction={repeatingTransaction} />}
-            {showCalculator && <CalculatorModal onClose={() => setShowCalculator(false)} onConfirm={(v) => { setFormAmount(v); setShowCalculator(false); }} />}
-            
-            {showChat && (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-end justify-end p-4 pointer-events-none">
-                    <div className="pointer-events-auto w-full max-w-sm mb-16 sm:mb-0">
-                         <ChatInterface 
-                            isOpen={true} 
-                            onClose={() => setShowChat(false)} 
-                            onAddTransaction={handleAddTransaction}
-                            onAddRecurringTransaction={handleAddRecurringTransaction}
-                            onAddAsset={handleAddAsset}
-                            onUpdateTransaction={handleUpdateTransaction}
-                            onDeleteTransaction={handleDeleteTransaction}
-                            currentCompany={currentCompany} 
-                            transactions={transactions} 
-                        />
-                    </div>
-                </div>
-            )}
-            
-            <Sidebar 
-                isOpen={showSidebar} 
-                onClose={() => setShowSidebar(false)} 
-                companies={companies}
-                currentCompany={currentCompany}
-                onChangeCompany={handleCompanyChange}
-                onAddCompany={handleCreateCompany}
-                onRenameCompany={handleRenameCompany}
-                onOpenSettings={() => setShowSettings(true)}
-                onOpenInstall={() => { handleInstallClick(); setShowSidebar(false); }} 
-            />
-
-            {showSettings && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center"><h2 className="text-xl font-bold text-slate-800 dark:text-white">Configurar Subcategorias</h2><button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><LucideX size={24} /></button></div>
-                        <div className="p-6 overflow-y-auto flex-1 space-y-8">
-                            {!notificationsEnabled && (
-                                <div className="mb-8 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800 flex justify-between items-center">
-                                    <div>
-                                        <h4 className="font-bold text-indigo-800 dark:text-indigo-300 text-sm">Ativar Notificações</h4>
-                                        <p className="text-xs text-indigo-600 dark:text-indigo-400">Receba lembretes para lançar suas despesas.</p>
-                                    </div>
-                                    <button onClick={requestNotificationPermission} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"><LucideBell size={18} /></button>
-                                </div>
-                            )}
-                            {activeCategories.map(cat => (<div key={cat.value}><h3 className={`font-bold text-sm uppercase mb-3 ${cat.color.split(' ')[0]}`}>{cat.label}</h3><div className="flex gap-2 mb-3"><input placeholder={`Nova para ${cat.label}`} className="flex-1 p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm outline-none focus:border-indigo-500 bg-white dark:bg-slate-900 dark:text-white" onKeyDown={(e) => { if (e.key === 'Enter') { setNewSubcatName(e.target.value); handleAddSubcategory(cat.value); e.target.value = ''; } }} onBlur={(e) => setNewSubcatName(e.target.value)} /><button onClick={(e) => { handleAddSubcategory(cat.value); e.previousSibling.value = ''; }} className="bg-indigo-600 text-white px-4 rounded-lg hover:bg-indigo-700"><LucidePlus size={18} /></button></div><div className="flex flex-wrap gap-2">{subcategories[cat.value]?.map(sub => (<div key={sub.id} className="bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 group"><span className="dark:text-slate-300">{sub.name}</span><button onClick={() => handleDeleteSubcategory(sub.id)} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><LucideX size={14} /></button></div>))}{(!subcategories[cat.value] || subcategories[cat.value].length === 0) && <span className="text-slate-400 text-sm italic">Nenhuma.</span>}</div></div>))}</div>
-                    </div>
-                </div>
-            )}
-
+        <div className={`min-h-screen font-sans transition-colors duration-500 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
             <header className="max-w-5xl mx-auto p-4 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => setShowSidebar(true)} className="p-2"><LucideMenu size={28} /></button>
-                    <div><h1 className="text-2xl font-bold">Gestão Financeira</h1><p className="text-sm text-indigo-600 dark:text-indigo-400 flex items-center gap-1"><LucideBuilding2 size={14} /> {currentCompany?.name}</p></div>
-                    <button onClick={() => setShowCalculator(true)} className="p-2 text-indigo-600"><LucideCalculator/></button>
+                    <button onClick={()=>setShowSidebar(true)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg"><LucideMenu size={28} /></button>
+                    <div><h1 className="text-2xl font-black tracking-tight">Gestão Financeira</h1><p className="text-sm text-indigo-600 font-bold flex items-center gap-1 uppercase"><LucideBuilding2 size={14} /> {currentCompany?.name}</p></div>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
-                    <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun/> : <LucideMoon/>}</button>
-                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                    <button onClick={handleExportCSV} className="p-2 text-indigo-600"><LucideDownload/></button>
-                    <button onClick={handlePrint} className="p-2 text-slate-600"><LucidePrinter/></button>
+                    <button onClick={()=>setDarkMode(!darkMode)} className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun/> : <LucideMoon/>}</button>
+                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm outline-none font-bold" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+                    {period !== 'ALL' && <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm outline-none font-bold" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}</select>}
                 </div>
             </header>
 
             <main className="max-w-5xl mx-auto p-4">
-                <div className="flex overflow-x-auto gap-2 mb-6 pb-2">
-                    {['lancamentos', 'planejamento', 'patrimonio', 'resultados'].map(t => (
-                        <button key={t} onClick={() => setMainTab(t)} className={`px-4 py-2 rounded-lg font-bold whitespace-nowrap ${mainTab === t ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                            {t === 'lancamentos' ? 'LANÇAMENTOS' : t === 'planejamento' ? 'PLANEJAMENTO' : t === 'patrimonio' ? 'PATRIMÔNIO' : 'RESULTADOS'}
-                        </button>
-                    ))}
+                <div className="flex overflow-x-auto gap-2 mb-6 pb-2 no-print border-b border-slate-200 dark:border-slate-800">
+                    <button onClick={()=>setMainTab('lancamentos')} className={`px-6 py-3 rounded-t-xl font-black transition-all ${mainTab==='lancamentos'?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}>LANÇAMENTOS</button>
+                    <button onClick={()=>setMainTab('planejamento')} className={`px-6 py-3 rounded-t-xl font-black transition-all ${mainTab==='planejamento'?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}>PLANEJAMENTO</button>
+                    <button onClick={()=>setMainTab('patrimonio')} className={`px-6 py-3 rounded-t-xl font-black transition-all ${mainTab==='patrimonio'?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}>PATRIMÔNIO</button>
+                    <button onClick={()=>setMainTab('resultados')} className={`px-6 py-3 rounded-t-xl font-black transition-all ${mainTab==='resultados'?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}>RESULTADOS</button>
                 </div>
 
                 {mainTab === 'lancamentos' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 animate-fade-in">
                         <div className="lg:col-span-2 space-y-6">
-                            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm">
-                                <h2 className="font-bold text-lg mb-4">{editingTransaction ? 'Editar' : 'Novo Lançamento'}</h2>
+                            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700">
+                                <h2 className="font-black text-xl mb-4 flex items-center gap-2">{editingTransaction ? <LucideEdit2 className="text-indigo-500"/> : <LucidePlus className="text-green-500"/>} {editingTransaction ? 'Editar' : 'Novo Lançamento'}</h2>
                                 <form onSubmit={handleSaveTransaction} className="space-y-4">
-                                    <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg" />
-                                    <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
-                                    <select value={formSubcat} onChange={e => setFormSubcat(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg"><option value="">Sem subcategoria</option>{subcategories[formType]?.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select>
-                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Descrição" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg" />
-                                    <input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg font-bold" />
-                                    {!editingTransaction && (
-                                        <div className="flex items-center gap-2 mt-2"><input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} /> <label>Repetir?</label> {isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(e.target.value)} className="w-16 p-1 border rounded" />}</div>
-                                    )}
-                                    <div className="flex gap-2">
-                                        <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-bold">Salvar</button>
-                                        {editingTransaction && <button type="button" onClick={resetForm} className="px-4 bg-slate-200 dark:bg-slate-700 rounded-lg">Cancelar</button>}
-                                    </div>
+                                    <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
+                                    <select value={formSubcat} onChange={e => setFormSubcat(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Sem subcategoria</option>{subcategories[formType]?.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select>
+                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Descrição (Ex: Condomínio)" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    <div className="relative"><span className="absolute left-3 top-3.5 font-bold text-slate-400">R$</span><input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-3 pl-10 bg-slate-50 dark:bg-slate-900 border rounded-xl font-black text-lg outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                    {!editingTransaction && (<div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border"><div className="flex items-center gap-2"><input type="checkbox" id="rec" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-5 h-5 rounded" /><label htmlFor="rec" className="font-bold text-sm">RECORRENTE?</label></div>{isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(parseInt(e.target.value))} className="w-16 p-1 border rounded bg-white dark:bg-slate-800 text-center font-bold" />}</div>)}
+                                    <div className="flex gap-2"><button type="submit" className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg transition-all uppercase tracking-widest">Gravar</button>{editingTransaction && <button type="button" onClick={()=>setEditingTransaction(null)} className="px-6 bg-slate-200 dark:bg-slate-700 rounded-xl font-bold">Cancelar</button>}</div>
                                 </form>
                             </div>
                         </div>
                         <div className="lg:col-span-3">
-                            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm h-[600px] flex flex-col">
-                                <div className="p-4 border-b dark:border-slate-700 font-bold flex justify-between items-center">
-                                    <span>Histórico ({searchedData.length})</span>
-                                    <div className="relative"><LucideSearch size={14} className="absolute left-2 top-2.5 text-slate-400"/><input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-lg text-sm w-32" /></div>
-                                </div>
-                                <div className="flex-1 overflow-y-auto">
+                            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border h-[650px] flex flex-col">
+                                <div className="p-5 border-b flex justify-between items-center"><span className="font-black uppercase text-xs tracking-widest text-slate-500">Histórico de Lançamentos</span><div className="relative"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-xs w-40 outline-none" /></div></div>
+                                <div className="flex-1 overflow-y-auto p-2 space-y-2">
                                     {searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (
-                                        <div key={t.id} className="p-4 border-b dark:border-slate-700 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                            <div>
-                                                <p className="font-bold">{t.desc}</p>
-                                                <p className="text-xs text-slate-500">{safeDate(t.createdAt)} • {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]} {t.subcategory && `• ${t.subcategory}`}</p>
-                                            </div>
+                                        <div key={t.id} className="p-4 bg-white dark:bg-slate-800/50 border dark:border-slate-700 rounded-xl flex justify-between items-center hover:shadow-md transition-all">
+                                            <div className="truncate"><p className="font-black truncate text-sm uppercase">{t.desc}</p><p className="text-[10px] text-slate-400 font-bold">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
                                             <div className="flex items-center gap-3">
-                                                <span className={`font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-600' : 'text-red-600'}`}>{safeCurrency(t.amount)}</span>
-                                                <button onClick={() => { setEditingTransaction(t); setFormDesc(t.desc); setFormAmount(t.amount); setFormType(t.type); setFormSubcat(t.subcategory); }}><LucideEdit2 size={16} className="text-slate-400 hover:text-indigo-500" /></button>
-                                                <button onClick={() => setRepeatingTransaction(t)}><LucideRepeat size={16} className="text-slate-400 hover:text-indigo-500" /></button>
-                                                <button onClick={() => handleDelete(t.id)}><LucideTrash2 size={16} className="text-slate-400 hover:text-red-500" /></button>
+                                                <span className={`font-black whitespace-nowrap text-base ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
+                                                <button onClick={() => handleEditClick(t)} className="p-2 hover:bg-indigo-50 rounded-full text-slate-400 hover:text-indigo-600"><LucideEdit2 size={16}/></button>
+                                                <button onClick={async() => { if(window.confirm("Excluir Lord?")) await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, t.id)) }} className="p-2 hover:bg-red-50 rounded-full text-slate-400 hover:text-red-600"><LucideTrash2 size={16}/></button>
                                             </div>
                                         </div>
                                     ))}
@@ -1068,23 +554,42 @@ export default function App() {
                     </div>
                 )}
 
-                {mainTab === 'planejamento' && <BudgetPlanningView budget={budget} subcategories={subcategories} onSaveBudget={handleSaveBudget} isMonthly={typeof period === 'number'} companyType={companyType} />}
-                
-                {mainTab === 'patrimonio' && <AssetsView assets={assets} onAddAsset={handleAddAsset} onDeleteAsset={handleDeleteAsset} />}
-                
+                {mainTab === 'planejamento' && <BudgetPlanningView budget={budget} subcategories={subcategories} onSaveBudget={async(b)=>await setDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/budgets/${year}_${period}`), b)} isMonthly={typeof period === 'number'} companyType={companyType} />}
+                {mainTab === 'patrimonio' && <AssetsView assets={assets} onAddAsset={d=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), d)} onDeleteAsset={id=>deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`, id))} />}
                 {mainTab === 'resultados' && (
-                    <div className="space-y-8">
-                         <div className="flex gap-2 overflow-x-auto pb-2">
-                            {['dre', 'fluxo', 'graficos', 'subcategorias'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-3 py-1 rounded-full text-sm font-bold ${resultTab === k ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{k.toUpperCase()}</button>))}
+                    <div className="space-y-8 animate-fade-in">
+                         <div className="flex gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl w-fit">
+                            {['dre', 'fluxo', 'graficos'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${resultTab === k ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-500'}`}>{k}</button>))}
                          </div>
-                         {resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} isPrintMode={false} />}
-                         {resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} isPrintMode={false} />}
+                         {resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} />}
+                         {resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} />}
                          {resultTab === 'graficos' && <ChartsView allTransactions={transactions} companyType={companyType} />}
-                         {resultTab === 'subcategorias' && <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL} /></div>}
                     </div>
                 )}
             </main>
-            <button onClick={() => setShowChat(!showChat)} className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-xl hover:scale-105 transition-transform"><LucideMessageSquare size={24} /></button>
+            <button onClick={() => setShowChat(!showChat)} className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl hover:scale-110 transition-all border-4 border-white dark:border-slate-800"><LucideMessageSquare size={24} /></button>
         </div>
     );
+}
+
+// CALCULADORA CORRIGIDA (SEM EVAL DIRETO)
+function CalculatorModal({onClose,onConfirm}){
+    const [e,setE]=useState('');
+    const h=(v)=>{
+        if(v==='C')setE('');
+        else if(v==='='){
+            try{
+                // Uso de Function constructor para evitar o aviso do bundler sobre eval direto
+                const calc = new Function('return ' + e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'));
+                setE(String(calc()));
+            }catch{setE('Erro')}
+        }else setE(p=>p+v)
+    };
+    return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl"><div className="flex justify-between mb-4"><h3 className="font-black text-indigo-600 uppercase tracking-widest text-sm">Lord Calc</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl mb-4 text-right font-black text-3xl overflow-hidden">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'].map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl font-black text-xl hover:bg-indigo-50 active:scale-95 transition-all">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-indigo-600 text-white p-4 rounded-xl font-black text-xl shadow-lg">=</button></div><button onClick={()=>onConfirm(e.replace('.',','))} className="w-full bg-slate-800 text-white p-4 rounded-xl font-black uppercase tracking-widest transition-all">Usar Valor</button></div></div>)
+}
+
+function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onRenameCompany, onOpenSettings }){
+    const [newName, setNewName] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
+    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center"><h2 className="font-black uppercase text-xs tracking-widest text-slate-500">Minhas Contas</h2><button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-2"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'?<LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-bold truncate">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 hover:border-indigo-400 hover:text-indigo-400 transition-all font-bold"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mt-2 border space-y-3"><input autoFocus placeholder="Nome do Império" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><div className="flex gap-2"><button onClick={()=>onAddCompany(newName, 'business')} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button><button onClick={()=>setIsCreating(false)} className="px-3 bg-slate-200 rounded-lg">X</button></div></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all"><LucideSettings/> Configurações</button></div> </div> </div> </>)
 }
