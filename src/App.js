@@ -73,7 +73,25 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-const transactionCategories = categoriesBusiness; 
+const defaultSubcategoriesBusiness = {
+    [TransactionTypeBusiness.RECEITA]: ['Vendas de Produtos', 'Prestação de Serviços', 'Rendimentos'],
+    [TransactionTypeBusiness.CUSTO]: ['Mercadoria (CMV)', 'Matéria-Prima', 'Fretes'],
+    [TransactionTypeBusiness.DESPESA_OPERACIONAL]: ['Salários', 'Aluguel', 'Marketing', 'Energia/Água'],
+    [TransactionTypeBusiness.JUROS_FINANCEIROS]: ['Tarifas Bancárias', 'Juros Empréstimos'],
+    [TransactionTypeBusiness.IMPOSTOS]: ['Simples Nacional', 'ICMS', 'ISS']
+};
+
+const defaultSubcategoriesPersonal = {
+    [TransactionTypePersonal.RECEITA]: ['Salário', 'Freelance', 'Dividendos'],
+    [TransactionTypePersonal.MORADIA]: ['Aluguel/Condomínio', 'Luz', 'Água', 'Internet'],
+    [TransactionTypePersonal.ALIMENTACAO]: ['Supermercado', 'Restaurantes'],
+    [TransactionTypePersonal.TRANSPORTE]: ['Combustível', 'Uber/99'],
+    [TransactionTypePersonal.LAZER]: ['Viagens', 'Streaming'],
+    [TransactionTypePersonal.SAUDE]: ['Farmácia', 'Plano de Saúde'],
+    [TransactionTypePersonal.EDUCACAO]: ['Cursos', 'Livros'],
+    [TransactionTypePersonal.INVESTIMENTOS]: ['Ações', 'CDB'],
+    [TransactionTypePersonal.DIVIDAS]: ['Cartão de Crédito', 'Empréstimo']
+};
 
 // ============================================================================
 // 2. FUNÇÕES AUXILIARES
@@ -195,7 +213,7 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                     <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
                     <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
                 </div>
-                <button onClick={handleAdd} className="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg"><LucidePlus size={18}/> Adicionar ao Patrimônio</button>
+                <button onClick={handleAdd} className="w-full mt-3 py-2 bg-indigo-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg"><LucidePlus size={18}/> Adicionar ao Patrimônio</button>
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
@@ -282,7 +300,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
                                       : (companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL);
                 try {
                     await onAddRecurringTransaction({ desc: cleanDesc || 'Recorrente', amount, type, months: months > 1 ? months : 12 });
-                    botResponse.text = `🔄 Agendado! "${cleanDesc || 'Despesa'}" de ${safeCurrency(amount)} mensalmente por ${months > 1 ? months : 12} meses. Já aparecem no seu planeamento futuro!`;
+                    botResponse.text = `🔄 Agendado! "${cleanDesc || 'Despesa'}" de ${safeCurrency(amount)} mensalmente por ${months > 1 ? months : 12} meses. Já aparecem no seu planejamento futuro!`;
                 } catch(e) { botResponse.text = "Erro ao processar as parcelas futuras."; }
             }
             else if (amount > 0) {
@@ -330,6 +348,9 @@ const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, co
         if (budget) {
             setLocalBudget(budget || {});
             setLocalSubBudget(budget?.subcategories || {});
+        } else {
+            setLocalBudget({});
+            setLocalSubBudget({});
         }
     }, [budget]);
 
@@ -421,6 +442,12 @@ export default function App() {
     const [showUpdateMessage, setShowUpdateMessage] = useState(false);
     const [showInitialChoice, setShowInitialChoice] = useState(false);
     const [deletingRecurring, setDeletingRecurring] = useState(null);
+    const [budget, setBudget] = useState({});
+
+    // Assistente IA Draggable State
+    const [chatPos, setChatPos] = useState({ x: 32, y: 32 });
+    const [isDragging, setIsDragging] = useState(false);
+    const chatBtnRef = useRef(null);
 
     // Form States
     const [editingTransaction, setEditingTransaction] = useState(null);
@@ -441,8 +468,8 @@ export default function App() {
         const app = initializeApp(firebaseConfig);
         const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
         
-        const updateViews = parseInt(localStorage.getItem('upd_v46_final') || '0');
-        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v46_final', (updateViews + 1).toString()); }
+        const updateViews = parseInt(localStorage.getItem('upd_v46_final_v3') || '0');
+        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v46_final_v3', (updateViews + 1).toString()); }
         if (!localStorage.getItem('hasSeenFinTutorial_v46')) setShowTutorial(true);
 
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
@@ -456,8 +483,14 @@ export default function App() {
         return onSnapshot(q, (snap) => {
             const comps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             setCompanies(comps);
-            if (comps.length > 0 && !currentCompany) setCurrentCompany(comps[0]);
-            if (comps.length === 0) setShowInitialChoice(true);
+            
+            if (comps.length > 0) {
+                const lastId = localStorage.getItem('lastCompanyId');
+                const found = comps.find(c => c.id === lastId);
+                setCurrentCompany(found || comps[0]);
+            } else {
+                setShowInitialChoice(true);
+            }
             setLoading(false);
         });
     }, [user, db]);
@@ -474,6 +507,11 @@ export default function App() {
         const unsubAssets = onSnapshot(qAssets, snap => setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
         return () => { unsubTx(); unsubSub(); unsubAssets(); };
     }, [user, db, currentCompany]);
+
+    useEffect(() => {
+        if (!user || !db || !currentCompany || typeof period !== 'number') return;
+        getDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/budgets/${year}_${period}`)).then(snap => setBudget(snap.exists() ? snap.data() : {}));
+    }, [user, db, period, year, currentCompany]);
 
     const filteredData = useMemo(() => {
         return transactions.filter(t => {
@@ -552,10 +590,41 @@ export default function App() {
         if (!name || !user) return;
         const newCompRef = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies`));
         await setDoc(newCompRef, { name, type, createdAt: Timestamp.now() });
+        const batch = writeBatch(db);
+        const subCats = type === 'personal' ? defaultSubcategoriesPersonal : defaultSubcategoriesBusiness;
+        Object.entries(subCats).forEach(([catType, names]) => {
+            names.forEach(n => {
+                const ref = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${newCompRef.id}/subcategories`));
+                batch.set(ref, { name: n, type: catType });
+            });
+        });
+        await batch.commit();
         setShowInitialChoice(false);
     };
 
-    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">Preparando o seu sistema financeiro...</p></div>;
+    const handleCompanyChange = (company) => {
+        setCurrentCompany(company);
+        localStorage.setItem('lastCompanyId', company.id);
+        setShowSidebar(false);
+    };
+
+    // Lógica de Draggable (Mobile Touch)
+    const handleTouchMove = (e) => {
+        if (!isDragging) setIsDragging(true);
+        const touch = e.touches[0];
+        const newX = window.innerWidth - touch.clientX - 25;
+        const newY = window.innerHeight - touch.clientY - 25;
+        setChatPos({ 
+            x: Math.max(0, Math.min(newX, window.innerWidth - 60)), 
+            y: Math.max(0, Math.min(newY, window.innerHeight - 60)) 
+        });
+    };
+
+    const handleTouchEnd = () => {
+        setTimeout(() => setIsDragging(false), 100);
+    };
+
+    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">A preparar o seu sistema financeiro...</p></div>;
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-500 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
@@ -589,7 +658,7 @@ export default function App() {
                                 <form onSubmit={handleSaveTransaction} className="space-y-5">
                                     <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
                                     <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500 dark:text-white">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
-                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Descrição do item" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
+                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="O que deseja registrar?" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
                                     <div className="relative"><span className="absolute left-4 top-4 font-black text-slate-400">R$</span><input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-4 pl-12 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-black text-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" /></div>
                                     {!editingTransaction && (<div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border"><div className="flex items-center gap-3"><input type="checkbox" id="rec" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-6 h-6 rounded-lg text-indigo-600" /><label htmlFor="rec" className="font-black text-xs uppercase tracking-widest text-slate-500">Fixa Mensal?</label></div>{isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(parseInt(e.target.value))} className="w-16 p-2 rounded-lg bg-white dark:bg-slate-800 text-center font-bold" />}</div>)}
                                     <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95">REGISTRAR</button>
@@ -667,15 +736,31 @@ export default function App() {
             {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v46', 'true')}} />}
             {showCalculator && <CalculatorModal onClose={()=>setShowCalculator(false)} onConfirm={v=>{setFormAmount(v); setShowCalculator(false)}} />}
             
-            <button onClick={() => setShowChat(!showChat)} className="fixed bottom-8 right-8 z-50 p-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl hover:scale-110 transition-all border-4 border-white dark:border-slate-800 ring-4 ring-indigo-600/20"><LucideMessageSquare size={32} /></button>
+            {/* BOTÃO ASSISTENTE IA DRAGGABLE (MÓVEL) */}
+            <button 
+                ref={chatBtnRef}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onClick={() => !isDragging && setShowChat(!showChat)}
+                style={{ 
+                    bottom: chatPos.y ? `${chatPos.y}px` : '32px', 
+                    right: chatPos.x ? `${chatPos.x}px` : '32px',
+                    position: 'fixed'
+                }}
+                className="z-[70] p-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl hover:scale-110 transition-transform border-4 border-white dark:border-slate-800 ring-4 ring-indigo-600/20 active:scale-95 select-none touch-none"
+            >
+                <LucideMessageSquare size={32} />
+            </button>
+
             {showChat && <ChatInterface isOpen={true} onClose={()=>setShowChat(false)} onAddTransaction={async(d)=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`), {...d, createdAt: Timestamp.fromDate(d.date)})} onAddRecurringTransaction={handleAddRecurringTransaction} onAddAsset={d=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), d)} onUpdateTransaction={(id,d)=>updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id), d)} onDeleteTransaction={(id)=>deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id))} currentCompany={currentCompany} transactions={transactions} />}
+            <Sidebar isOpen={showSidebar} onClose={() => setShowSidebar(false)} companies={companies} currentCompany={currentCompany} onChangeCompany={handleCompanyChange} onAddCompany={handleCreateCompany} onOpenSettings={() => setShowSettings(true)} />
         </div>
     );
 }
 
 function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onOpenSettings }){
     const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false); const [newType, setNewType] = useState('business');
-    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Contas Ativas<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400 transition-all"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><div className="flex gap-2"><button onClick={()=>setNewType('business')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='business'?'bg-indigo-100 border-indigo-600 text-indigo-700':'bg-white text-slate-400'}`}>Empresa</button><button onClick={()=>setNewType('personal')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='personal'?'bg-green-100 border-green-600 text-green-700':'bg-white text-slate-400'}`}>Pessoal</button></div><button onClick={()=>{onAddCompany(newName, newType); setNewName(''); setIsCreating(false);}} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
+    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Suas Contas<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3 overflow-y-auto"> {companies.map(c => (<div key={c.id} onClick={() => onChangeCompany(c)} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400 transition-all"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><div className="flex gap-2"><button onClick={()=>setNewType('business')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='business'?'bg-indigo-100 border-indigo-600 text-indigo-700':'bg-white text-slate-400'}`}>Empresa</button><button onClick={()=>setNewType('personal')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='personal'?'bg-green-100 border-green-600 text-green-700':'bg-white text-slate-400'}`}>Pessoal</button></div><button onClick={()=>{onAddCompany(newName, newType); setNewName(''); setIsCreating(false);}} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
 }
 
 function CalculatorModal({onClose,onConfirm}){
@@ -692,7 +777,7 @@ function CalculatorModal({onClose,onConfirm}){
 function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
-        { title: "BEM-VINDO!", desc: "O seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
+        { title: "BEM-VINDO!", desc: "Seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
         { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registrar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
         { title: "ASSISTENTE IA", desc: "Dê ordens por texto ou voz ao Assistente IA. Ele entende recorrências e patrimônios automaticamente.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
         { title: "PATRIMÔNIO", desc: "Registre bens e investimentos. O sistema projeta o rendimento diário estimado para você baseado em índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
