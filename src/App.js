@@ -81,7 +81,8 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-const transactionCategories = categoriesBusiness; // Fallback crucial
+// *** VARIAVEL GLOBAL DE SEGURANÇA PARA EVITAR CRASH ***
+const transactionCategories = categoriesBusiness; 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
@@ -101,6 +102,7 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     cats.forEach(cat => { if (!cat.isPositive) totalSaidas += sumByType(cat.value); });
     const fluxoCaixa = receita - totalSaidas;
     
+    // Garantia que assets é array
     const safeAssets = Array.isArray(assets) ? assets : [];
     const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
     const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
@@ -116,48 +118,43 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     return financials;
 };
 
-// --- Componente de Patrimônio e Indicadores ---
+// --- Componentes ---
+
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
     const [type, setType] = useState('bens'); 
     const [indexer, setIndexer] = useState('');
-    
-    // Estado para os indicadores
-    const [indices, setIndices] = useState({
-        USD: '...', EUR: '...', BTC: '...', CDI: '...', SELIC: '...'
-    });
+    const [marketData, setMarketData] = useState({ USD: '...', EUR: '...', BTC: '...', CDI: '...', SELIC: '...' });
 
     useEffect(() => {
         const fetchMarketData = async () => {
             try {
-                // HG Brasil API via Proxy para evitar CORS em dev/web
-                // Nota: Em produção real, chame isso do backend. Aqui usamos um truque.
-                const key = '855e9e8f';
+                const key = '855e9e8f'; // Sua Chave HG Brasil
                 
-                // Fetch Moedas (AwesomeAPI - Pública e Gratuita)
+                // 1. Fetch Moedas (AwesomeAPI - Pública)
                 const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
                 const dataCoins = await resCoins.json();
                 
-                // Fetch Índices (HG Brasil)
-                // Se der erro de CORS, usamos fallback
-                let hgData = { taxes: { cdi: 11.25, selic: 11.25 } }; 
+                // 2. Fetch Índices (HG Brasil com JSON-CORS para evitar bloqueio)
+                // Se der erro de CORS, vai cair no catch e manter os placeholders
+                let hgData = { cdi: 11.25, selic: 11.25 }; 
                 try {
                     const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
                     const jsonHg = await resHg.json();
-                    if(jsonHg.results) hgData = jsonHg.results;
-                } catch(e) { console.log('HG Brasil limitou CORS, usando fallback.'); }
+                    if(jsonHg.results) hgData = jsonHg.results[0]; // HG retorna array em results
+                } catch(e) { console.log('HG Brasil CORS fallback'); }
 
-                setIndices({
+                setMarketData({
                     USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
                     EUR: `R$ ${parseFloat(dataCoins.EURBRL.bid).toFixed(2)}`,
                     BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR', {maximumFractionDigits: 0})}`,
-                    CDI: `${hgData.taxes.cdi || 11.25}%`,
-                    SELIC: `${hgData.taxes.selic || 11.25}%`
+                    CDI: `${hgData.cdi || 11.25}%`,
+                    SELIC: `${hgData.selic || 11.25}%`
                 });
             } catch (err) {
                 console.error(err);
-                setIndices({ USD: 'Erro', EUR: '-', BTC: '-', CDI: '11.25%', SELIC: '-' });
+                setMarketData({ USD: 'Erro', EUR: '-', BTC: '-', CDI: '11.25%', SELIC: '11.25%' });
             }
         };
         fetchMarketData();
@@ -188,13 +185,13 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
             </div>
             
             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
-                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado Hoje (HG Brasil + AwesomeAPI)</h3>
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado (Live)</h3>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.USD}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.EUR}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.BTC}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.CDI}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.SELIC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.USD}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.EUR}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.BTC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
                 </div>
             </div>
 
@@ -276,7 +273,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
                         const desc = text.replace(/[0-9.,]+/, '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$|reais)/gi, '').trim();
                         try { const newId = await onAddTransaction({ desc: desc || 'Via Chat', amount, type, subcategory: '', date: new Date() }); setLastActionId(newId); botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`; } catch (e) { botResponse.text = "Erro ao salvar."; }
                     } else { botResponse.text = `Entendi ${safeCurrency(amount)}, mas é Receita ou Despesa?`; }
-                } else { botResponse.text = "Não entendi o valor. Tente 'Gastei 50' ou 'Comprei Carro 50.000'."; }
+                } else { botResponse.text = "Não entendi o valor. Tente 'Gastei 50'."; }
             }
             setMessages(prev => [...prev, botResponse]);
         }, 500);
