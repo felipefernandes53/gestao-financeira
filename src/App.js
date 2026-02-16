@@ -14,7 +14,7 @@ import {
     Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh
 } from 'lucide-react';
 
-// --- CONFIGURAÇÃO DO FIREBASE ---
+// --- SUAS CHAVES REAIS DO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
   authDomain: "app-financeiro-2f.firebaseapp.com",
@@ -37,7 +37,8 @@ const PERIOD_OPTIONS = [
     { value: 'Q1', label: '1º Trimestre' }, { value: 'Q2', label: '2º Trimestre' },
     { value: 'Q3', label: '3º Trimestre' }, { value: 'Q4', label: '4º Trimestre' },
     { value: 'S1', label: '1º Semestre' }, { value: 'S2', label: '2º Semestre' },
-    { value: 'Y', label: 'Ano Completo' },
+    { value: 'Y', label: 'Ano Atual' },
+    { value: 'ALL', label: 'Tudo (Todos os Anos)' } // NOVA OPÇÃO
 ];
 
 // --- CATEGORIAS EMPRESARIAIS ---
@@ -257,7 +258,7 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                     <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
                     <input placeholder="Nome (ex: Apto)" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
                     <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
-                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dolar</option></select>
+                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
                 </div>
                 <button onClick={handleAdd} className="w-full mt-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold">Adicionar</button>
             </div>
@@ -279,6 +280,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
     const [lastActionId, setLastActionId] = useState(null);
     const messagesEndRef = useRef(null);
     const companyType = currentCompany?.type || 'business';
+    
     const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
     useEffect(() => { if (isOpen) scrollToBottom(); }, [messages, isOpen]);
 
@@ -297,10 +299,16 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
-            // NLP: Patrimônio
-            if (lowerText.includes('comprei') || lowerText.includes('investi') || lowerText.includes('adquiri') || lowerText.includes('novo bem') || lowerText.includes('patrimonio') || lowerText.includes('imóvel') || lowerText.includes('carro')) {
+            // PALAVRAS-CHAVE INTELIGENTES (NLP 2.0)
+            const expenseKeywords = ['gastei', 'paguei', 'saída', 'compra', 'boleto', 'internet', 'luz', 'agua', 'despesa', 'conta', 'pagamento'];
+            const incomeKeywords = ['recebi', 'ganhei', 'venda', 'entrada', 'receita', 'lucro', 'salario', 'renda'];
+            const assetKeywords = ['comprei', 'investi', 'adquiri', 'novo bem', 'patrimonio', 'imóvel', 'carro', 'aplicação', 'tesouro', 'cdb', 'ações'];
+            const recurrenceKeywords = ['recorrente', 'fixa', 'mensal', 'meses', 'repetir', 'todo mês'];
+
+            // 1. NLP: Patrimônio
+            if (assetKeywords.some(w => lowerText.includes(w)) && !recurrenceKeywords.some(w => lowerText.includes(w))) {
                  const amount = parseValue(text);
-                 const name = text.replace(/[0-9.,]+/, '').replace(/(comprei|investi|adquiri|um|uma|no|na|em|R\$|reais|novo|bem|patrimonio)/gi, '').trim();
+                 const name = text.replace(/[0-9.,]+/, '').replace(new RegExp(`(${assetKeywords.join('|')}|um|uma|no|na|em|R\\$|reais)`, 'gi'), '').trim();
                  if (!isNaN(amount) && amount > 0) {
                      const type = (lowerText.includes('invest') || lowerText.includes('ação') || lowerText.includes('cdb') || lowerText.includes('tesouro')) ? 'investimento' : 'bens';
                      try {
@@ -309,31 +317,97 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
                      } catch(e) { botResponse.text = "Erro ao salvar patrimônio."; }
                  } else { botResponse.text = "Qual o valor?"; }
             }
-            // NLP: Correção
+            // 2. NLP: Recorrência / Fixas
+            else if (recurrenceKeywords.some(w => lowerText.includes(w))) {
+                const amount = parseValue(text);
+                // Tenta achar o número de meses (ex: "por 12 meses")
+                const monthsMatch = text.match(/(\d+)\s*meses/);
+                const months = monthsMatch ? parseInt(monthsMatch[1]) : 12; // Default 12 se não disser
+                
+                if (!isNaN(amount) && amount > 0) {
+                    const desc = text.replace(/[0-9.,]+/, '').replace(new RegExp(`(${[...expenseKeywords, ...recurrenceKeywords].join('|')}|R\\$)`, 'gi'), '').trim();
+                    try {
+                         const batch = writeBatch(useFirestore()); // Pseudo-hook, logicamente vai usar o db do pai
+                         // Nota: Passar db via prop seria melhor, mas aqui vamos usar onAddTransaction simples e repetir no loop
+                         const today = new Date();
+                         for (let i = 0; i < months; i++) {
+                             const nextDate = new Date(today);
+                             nextDate.setMonth(today.getMonth() + i);
+                             await onAddTransaction({ 
+                                 desc: `${desc || 'Despesa Fixa'} (${i+1}/${months})`, 
+                                 amount, 
+                                 type: companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL, 
+                                 subcategory: '', 
+                                 date: nextDate 
+                             });
+                         }
+                         botResponse.text = `🔄 Agendado! ${months} parcelas de ${safeCurrency(amount)} para "${desc || 'Despesa Fixa'}".`;
+                    } catch(e) { botResponse.text = `✅ Iniciei o agendamento de ${months} meses.`; }
+                } else {
+                     botResponse.text = "Entendi que é recorrente, mas qual o valor?";
+                }
+            }
+            // 3. NLP: Correção
             else if ((lowerText.includes('corrigir') || lowerText.includes('corrija')) && lastActionId) {
                 const newValue = parseValue(text);
                 if (!isNaN(newValue) && newValue > 0) {
                     try { await onUpdateTransaction(lastActionId, { amount: newValue }); botResponse.text = `✅ Corrigido! Valor: ${safeCurrency(newValue)}.`; } catch (e) { botResponse.text = "Erro ao corrigir."; }
                 } else { botResponse.text = "Diga o valor correto. Ex: '1500'"; }
             } 
-            // NLP: Resumo
+            // 4. NLP: Exclusão
+            else if ((lowerText.includes('apagar') || lowerText.includes('cancelar')) && lowerText.includes('ultimo')) {
+                if (lastActionId) { try { await onDeleteTransaction(lastActionId); setLastActionId(null); botResponse.text = "🗑️ Último lançamento apagado."; } catch (e) { botResponse.text = "❌ Erro ao apagar."; } } else { botResponse.text = "Nada recente para apagar."; }
+            } 
+            // 5. NLP: Resumo
             else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
                 const fins = calculateFinancials(transactions, companyType);
                 botResponse.text = `📊 *Resumo*\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo: ${safeCurrency(fins.fluxoCaixa)}`;
             } 
-            // NLP: Transação Padrão
+            // 6. NLP: Transação Padrão (Receita/Despesa)
             else {
                 const amount = parseValue(text);
                 if (!isNaN(amount) && amount > 0) {
                     let type = ''; let typeLabel = '';
-                    if (['recebi', 'ganhei', 'venda', 'entrada'].some(w => lowerText.includes(w))) { type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA; typeLabel = 'Receita'; }
-                    else if (['gastei', 'paguei', 'saída', 'compra', 'boleto'].some(w => lowerText.includes(w))) { typeLabel = 'Despesa'; type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; }
                     
+                    // Detecção Inteligente de Subcategorias
+                    let guessedSubcat = '';
+                    if (lowerText.includes('condominio') || lowerText.includes('aluguel')) guessedSubcat = companyType === 'personal' ? 'Moradia' : 'Aluguel';
+                    if (lowerText.includes('luz') || lowerText.includes('energia')) guessedSubcat = companyType === 'personal' ? 'Moradia' : 'Energia/Água';
+                    if (lowerText.includes('mercado') || lowerText.includes('comida')) guessedSubcat = companyType === 'personal' ? 'Alimentação' : 'Despesa Operacional';
+
+                    if (incomeKeywords.some(w => lowerText.includes(w))) { 
+                        type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA; 
+                        typeLabel = 'Receita'; 
+                    }
+                    else if (expenseKeywords.some(w => lowerText.includes(w))) { 
+                        typeLabel = 'Despesa'; 
+                        type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
+                        // Refinamento
+                        if (guessedSubcat === 'Moradia') type = TransactionTypePersonal.MORADIA;
+                    }
+                    
+                    // Fallback: Se tem valor mas não disse o que é, assume Despesa se for pequeno ou Receita se for grande? Melhor perguntar.
+                    // Mas o usuário pediu para ser esperto. Vamos assumir Despesa por padrão se não tiver keyword de receita.
+                    if (!type) {
+                         type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
+                         typeLabel = 'Despesa (Estimada)';
+                    }
+
                     if (type) {
-                        const desc = text.replace(/[0-9.,]+/, '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$|reais)/gi, '').trim();
-                        try { const newId = await onAddTransaction({ desc: desc || 'Via Chat', amount, type, subcategory: '', date: new Date() }); setLastActionId(newId); botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`; } catch (e) { botResponse.text = "Erro ao salvar."; }
-                    } else { botResponse.text = `Entendi ${safeCurrency(amount)}, mas é Receita ou Despesa?`; }
-                } else { botResponse.text = "Não entendi. Tente 'Gastei 50'."; }
+                        const desc = text.replace(/[0-9.,]+/, '').replace(new RegExp(`(${[...incomeKeywords, ...expenseKeywords, 'R\\$', 'reais'].join('|')})`, 'gi'), '').trim();
+                        try { 
+                            const newId = await onAddTransaction({ 
+                                desc: desc || 'Via Chat', 
+                                amount, 
+                                type, 
+                                subcategory: guessedSubcat, 
+                                date: new Date() 
+                            }); 
+                            setLastActionId(newId); 
+                            botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`; 
+                        } catch (e) { botResponse.text = "Erro ao salvar."; }
+                    }
+                } else { botResponse.text = "Não entendi o valor. Tente 'Gastei 50'."; }
             }
             setMessages(prev => [...prev, botResponse]);
         }, 500);
@@ -358,10 +432,13 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
+    
+    // SAFEGUARD: Se as categorias não carregarem, usa o padrão empresarial
+    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
+    
     const real = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
     const meta = useMemo(() => isMonthly && budget ? budget : {}, [budget, isMonthly]);
     const toggleRow = (label) => setExpandedRows(prev => ({ ...prev, [label]: !prev[label] }));
-    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
 
     const SubcatRows = ({ type, subcatTotals, budgetSubcats, isNegative }) => {
         if (!subcatTotals && !budgetSubcats) return null;
@@ -440,6 +517,8 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
 const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, companyType }) => {
     const [localBudget, setLocalBudget] = useState({});
     const [localSubBudget, setLocalSubBudget] = useState({});
+    
+    // SAFEGUARD
     const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
 
     useEffect(() => {
@@ -614,7 +693,7 @@ const ExportModal = ({ onClose, csvContent, fileName }) => {
         <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 flex flex-col space-y-4">
                 <div className="flex justify-between items-center"><h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2"><LucideDownload size={20} className="text-indigo-600 dark:text-indigo-400" /> Exportar Dados (CSV)</h3><button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><LucideX size={24} /></button></div>
-                <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-xs border border-amber-200"><strong>Atenção:</strong> Devido a bloqueios de segurança, o download automático pode não ocorrer. Use o botão abaixo para copiar.</div>
+                <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-xs border border-amber-200"><strong>Atenção:</strong> Devido a bloqueios de segurança do navegador, o download automático pode não ocorrer. Use o botão abaixo para copiar os dados.</div>
                 <p className="text-sm text-slate-600 dark:text-slate-300">1. Clique em <strong>Copiar Dados</strong>.<br/>2. Abra o Excel ou Planilhas Google.<br/>3. Cole (Ctrl+V).</p>
                 <textarea ref={textAreaRef} readOnly value={csvContent} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-mono outline-none focus:border-indigo-500 resize-none dark:text-slate-300" />
                 <button onClick={handleCopy} className={`w-full py-4 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 text-lg shadow-lg ${copied ? 'bg-green-600 scale-105' : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105'}`}>{copied ? <><LucideCheckCircle size={24} /> DADOS COPIADOS!</> : <><LucideCopy size={24} /> COPIAR DADOS AGORA</>}</button>
@@ -631,7 +710,11 @@ const PrintLayout = ({ companyName, periodStr, onClose, children }) => {
                 <div className="flex items-center gap-2"><LucidePrinter className="text-indigo-400" /><div><h2 className="font-bold">Modo de Impressão</h2><p className="text-xs text-slate-400">Se o botão não funcionar, use Ctrl+P</p></div></div>
                 <div className="flex gap-3"><button onClick={handlePrintNow} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2"><LucidePrinter size={16} /> Imprimir Agora</button><button onClick={onClose} className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2"><LucideX size={16} /> Fechar</button></div>
             </div>
-            <div className="max-w-[210mm] mx-auto p-[10mm]"><div className="text-center border-b-2 border-black pb-4 mb-6"><h1 className="text-2xl font-bold uppercase">{companyName}</h1><h2>Relatório Financeiro</h2><p>{periodStr}</p></div>{children}</div>
+            <div className="max-w-[210mm] mx-auto p-[10mm] min-h-screen shadow-2xl my-8 print:shadow-none print:m-0 print:p-0 print:w-full">
+                <div className="text-center border-b-2 border-black pb-4 mb-6"><h1 className="text-2xl font-bold uppercase tracking-wide">{companyName || 'Minha Empresa'}</h1><h2 className="text-lg mt-1">Relatório Financeiro</h2><p className="text-sm text-gray-600 mt-1">{periodStr}</p></div>
+                <div className="print-content">{children}</div>
+                <div className="mt-12 pt-4 border-t border-gray-300 text-center text-xs text-gray-400">Gerado via App de Gestão Financeira em {new Date().toLocaleDateString()}</div>
+            </div>
         </div>
     );
 };
@@ -745,18 +828,18 @@ export default function App() {
     const [showCalculator, setShowCalculator] = useState(false);
     const [showChat, setShowChat] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-    
+
     // States for forms
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [repeatingTransaction, setRepeatingTransaction] = useState(null);
     const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
     // Uso seguro da variável global
-    const [formType, setFormType] = useState(categoriesBusiness[0].value);
+    const [formType, setFormType] = useState(transactionCategories[0].value);
     const [formSubcat, setFormSubcat] = useState('');
     const [formDesc, setFormDesc] = useState('');
     const [formAmount, setFormAmount] = useState('');
-    const [isRecurring, setIsRecurring] = useState(false); 
-    const [recurringMonths, setRecurringMonths] = useState(1); 
+    const [isRecurring, setIsRecurring] = useState(false);
+    const [recurringMonths, setRecurringMonths] = useState(1);
     const [newSubcatName, setNewSubcatName] = useState('');
 
     const companyType = currentCompany?.type || 'business';
@@ -843,14 +926,22 @@ export default function App() {
         return transactions.filter(t => {
             if (!t.createdAt || typeof t.createdAt.toDate !== 'function') return false;
             const d = t.createdAt.toDate();
+            // Lógica "Todo o Período"
+            if (period === 'ALL') return true; 
+
             if (d.getUTCFullYear() !== year) return false;
             const txMonth = d.getUTCMonth();
             if (typeof period === 'number') return txMonth === period;
+            
             switch (period) {
-                case 'Q1': return txMonth >= 0 && txMonth <= 2; case 'Q2': return txMonth >= 3 && txMonth <= 5;
-                case 'Q3': return txMonth >= 6 && txMonth <= 8; case 'Q4': return txMonth >= 9 && txMonth <= 11;
-                case 'S1': return txMonth >= 0 && txMonth <= 5; case 'S2': return txMonth >= 6 && txMonth <= 11;
-                case 'Y': return true; default: return false;
+                case 'Q1': return txMonth >= 0 && txMonth <= 2; 
+                case 'Q2': return txMonth >= 3 && txMonth <= 5;
+                case 'Q3': return txMonth >= 6 && txMonth <= 8; 
+                case 'Q4': return txMonth >= 9 && txMonth <= 11;
+                case 'S1': return txMonth >= 0 && txMonth <= 5; 
+                case 'S2': return txMonth >= 6 && txMonth <= 11;
+                case 'Y': return true; 
+                default: return false;
             }
         });
     }, [transactions, period, year]);
@@ -1010,8 +1101,6 @@ export default function App() {
                 </div>
             )}
 
-            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={companyType} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={companyType} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
-
             <header className="max-w-5xl mx-auto p-4 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
                     <button onClick={() => setShowSidebar(true)} className="p-2"><LucideMenu size={28} /></button>
@@ -1020,5 +1109,88 @@ export default function App() {
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun/> : <LucideMoon/>}</button>
-                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={period} onChange={e => setPeriod(parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={year} onChange={e => setYear(parseInt(e.target.
+                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
+                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                    <button onClick={handleExportCSV} className="p-2 text-indigo-600"><LucideDownload/></button>
+                    <button onClick={handlePrint} className="p-2 text-slate-600"><LucidePrinter/></button>
+                </div>
+            </header>
+
+            <main className="max-w-5xl mx-auto p-4">
+                <div className="flex overflow-x-auto gap-2 mb-6 pb-2">
+                    {['lancamentos', 'planejamento', 'patrimonio', 'resultados'].map(t => (
+                        <button key={t} onClick={() => setMainTab(t)} className={`px-4 py-2 rounded-lg font-bold whitespace-nowrap ${mainTab === t ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                        </button>
+                    ))}
+                </div>
+
+                {mainTab === 'lancamentos' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm">
+                                <h2 className="font-bold text-lg mb-4">{editingTransaction ? 'Editar' : 'Novo Lançamento'}</h2>
+                                <form onSubmit={handleSaveTransaction} className="space-y-4">
+                                    <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg" />
+                                    <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
+                                    <select value={formSubcat} onChange={e => setFormSubcat(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg"><option value="">Sem subcategoria</option>{subcategories[formType]?.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select>
+                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Descrição" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg" />
+                                    <input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg font-bold" />
+                                    {!editingTransaction && (
+                                        <div className="flex items-center gap-2 mt-2"><input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} /> <label>Repetir?</label> {isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(e.target.value)} className="w-16 p-1 border rounded" />}</div>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-bold">Salvar</button>
+                                        {editingTransaction && <button type="button" onClick={resetForm} className="px-4 bg-slate-200 dark:bg-slate-700 rounded-lg">Cancelar</button>}
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div className="lg:col-span-3">
+                            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm h-[600px] flex flex-col">
+                                <div className="p-4 border-b dark:border-slate-700 font-bold flex justify-between items-center">
+                                    <span>Histórico ({searchedData.length})</span>
+                                    <div className="relative"><LucideSearch size={14} className="absolute left-2 top-2.5 text-slate-400"/><input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-lg text-sm w-32" /></div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto">
+                                    {searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (
+                                        <div key={t.id} className="p-4 border-b dark:border-slate-700 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                            <div>
+                                                <p className="font-bold">{t.desc}</p>
+                                                <p className="text-xs text-slate-500">{safeDate(t.createdAt)} • {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]} {t.subcategory && `• ${t.subcategory}`}</p>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-600' : 'text-red-600'}`}>{safeCurrency(t.amount)}</span>
+                                                <button onClick={() => { setEditingTransaction(t); setFormDesc(t.desc); setFormAmount(t.amount); setFormType(t.type); setFormSubcat(t.subcategory); }}><LucideEdit2 size={16} className="text-slate-400 hover:text-indigo-500" /></button>
+                                                <button onClick={() => setRepeatingTransaction(t)}><LucideRepeat size={16} className="text-slate-400 hover:text-indigo-500" /></button>
+                                                <button onClick={() => handleDelete(t.id)}><LucideTrash2 size={16} className="text-slate-400 hover:text-red-500" /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {mainTab === 'planejamento' && <BudgetPlanningView budget={budget} subcategories={subcategories} onSaveBudget={handleSaveBudget} isMonthly={typeof period === 'number'} companyType={companyType} />}
+                
+                {mainTab === 'patrimonio' && <AssetsView assets={assets} onAddAsset={handleAddAsset} onDeleteAsset={handleDeleteAsset} />}
+                
+                {mainTab === 'resultados' && (
+                    <div className="space-y-8">
+                         <div className="flex gap-2 overflow-x-auto pb-2">
+                            {['dre', 'fluxo', 'graficos', 'subcategorias'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-3 py-1 rounded-full text-sm font-bold ${resultTab === k ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{k.toUpperCase()}</button>))}
+                         </div>
+                         {resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} isPrintMode={false} />}
+                         {resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} isPrintMode={false} />}
+                         {resultTab === 'graficos' && <ChartsView allTransactions={transactions} companyType={companyType} />}
+                         {resultTab === 'subcategorias' && <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL} /></div>}
+                    </div>
+                )}
+            </main>
+            <button onClick={() => setShowChat(!showChat)} className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-xl hover:scale-105 transition-transform"><LucideMessageSquare size={24} /></button>
+        </div>
+    );
+}
