@@ -39,14 +39,10 @@ const PERIOD_OPTIONS = [
     { value: 'Y', label: 'Ano Completo' },
 ];
 
-// --- CATEGORIAS EMPRESARIAIS ---
-const TransactionTypeBusiness = {
-    RECEITA: 'Receita',
-    CUSTO: 'Custo',
-    DESPESA_OPERACIONAL: 'Despesa Operacional',
-    JUROS_FINANCEIROS: 'Juros/Financeiro',
-    IMPOSTOS: 'Impostos',
-};
+// --- CONSTANTES DE CATEGORIA (Definidas no topo para evitar erros) ---
+
+// EMPRESARIAL
+const TransactionTypeBusiness = { RECEITA: 'Receita', CUSTO: 'Custo', DESPESA_OPERACIONAL: 'Despesa Operacional', JUROS_FINANCEIROS: 'Juros/Financeiro', IMPOSTOS: 'Impostos' };
 const DEFAULT_SUBCATEGORIES_BUSINESS = {
     [TransactionTypeBusiness.RECEITA]: ['Vendas de Produtos', 'Prestação de Serviços', 'Rendimentos', 'Outras Receitas'],
     [TransactionTypeBusiness.CUSTO]: ['Compra de Mercadoria (CMV)', 'Matéria-Prima', 'Embalagens', 'Fretes'],
@@ -62,18 +58,8 @@ const categoriesBusiness = [
     { value: TransactionTypeBusiness.IMPOSTOS, label: 'Impostos (-)', color: 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30', isPositive: false },
 ];
 
-// --- CATEGORIAS PESSOAIS ---
-const TransactionTypePersonal = {
-    RECEITA: 'Renda',
-    MORADIA: 'Moradia',
-    ALIMENTACAO: 'Alimentação',
-    TRANSPORTE: 'Transporte',
-    LAZER: 'Lazer/Estilo de Vida',
-    SAUDE: 'Saúde',
-    EDUCACAO: 'Educação',
-    INVESTIMENTOS: 'Investimentos/Poupança',
-    DIVIDAS: 'Dívidas/Empréstimos'
-};
+// PESSOAL
+const TransactionTypePersonal = { RECEITA: 'Renda', MORADIA: 'Moradia', ALIMENTACAO: 'Alimentação', TRANSPORTE: 'Transporte', LAZER: 'Lazer/Estilo de Vida', SAUDE: 'Saúde', EDUCACAO: 'Educação', INVESTIMENTOS: 'Investimentos/Poupança', DIVIDAS: 'Dívidas/Empréstimos' };
 const DEFAULT_SUBCATEGORIES_PERSONAL = {
     [TransactionTypePersonal.RECEITA]: ['Salário', 'Freelance', 'Dividendos', 'Aluguéis Recebidos'],
     [TransactionTypePersonal.MORADIA]: ['Aluguel/Condomínio', 'Luz', 'Água', 'Internet', 'Gás', 'Manutenção'],
@@ -97,6 +83,8 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
+// *** VARIÁVEL DE SEGURANÇA GLOBAL ***
+// Isso impede o erro "transactionCategories is not defined"
 const transactionCategories = categoriesBusiness; 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
@@ -119,63 +107,40 @@ const safePercent = (value, total) => {
 const calculateFinancials = (data = [], type = 'business') => {
     const safeData = Array.isArray(data) ? data : [];
     const cats = type === 'personal' ? categoriesPersonal : categoriesBusiness;
-    
     const sumByType = (tType) => safeData.reduce((acc, t) => t.type === tType ? acc + (Number(t.amount) || 0) : acc, 0);
-    
     const subcatTotals = {};
-    safeData.forEach(t => {
-        if (t.subcategory) {
-            const key = `${t.type}:${t.subcategory}`;
-            subcatTotals[key] = (subcatTotals[key] || 0) + (Number(t.amount) || 0);
-        }
-    });
-
+    safeData.forEach(t => { if (t.subcategory) { const key = `${t.type}:${t.subcategory}`; subcatTotals[key] = (subcatTotals[key] || 0) + (Number(t.amount) || 0); } });
     const receitaKey = type === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
     const receita = sumByType(receitaKey);
-    
     let totalSaidas = 0;
-    cats.forEach(cat => {
-        if (!cat.isPositive) totalSaidas += sumByType(cat.value);
-    });
-
+    cats.forEach(cat => { if (!cat.isPositive) totalSaidas += sumByType(cat.value); });
     const fluxoCaixa = receita - totalSaidas;
-    
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals };
-    cats.forEach(cat => {
-        financials[cat.value] = sumByType(cat.value);
-    });
-    
+    cats.forEach(cat => { financials[cat.value] = sumByType(cat.value); });
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
         financials.ebitda = financials.lucroBruto - financials[TransactionTypeBusiness.DESPESA_OPERACIONAL];
         financials.lucroLiquido = financials.ebitda - financials[TransactionTypeBusiness.JUROS_FINANCEIROS] - financials[TransactionTypeBusiness.IMPOSTOS];
     }
-
     return financials;
 };
 
-// --- Componentes do Chat ---
+// --- Componentes ---
 
 const ChatInterface = ({ onAddTransaction, currentCompany, transactions }) => {
     const [messages, setMessages] = useState([
-        { id: 1, text: "Olá! Sou seu assistente financeiro. Pode falar comigo naturalmente.", sender: 'bot' },
-        { id: 2, text: "Ex: 'Recebi 500 de vendas' ou 'Gastei 100 com internet'. Também posso mostrar o 'resumo'.", sender: 'bot' }
+        { id: 1, text: "Olá! Sou seu assistente financeiro.", sender: 'bot' },
+        { id: 2, text: "Tente: 'Recebi 500 de vendas' ou 'Gastei 100 em café'.", sender: 'bot' }
     ]);
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef(null);
     const companyType = currentCompany?.type || 'business';
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+    const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
+    useEffect(() => { scrollToBottom(); }, [messages]);
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
-
         const userMsg = { id: Date.now(), text: inputText, sender: 'user' };
         setMessages(prev => [...prev, userMsg]);
         const text = inputText.toLowerCase();
@@ -183,44 +148,29 @@ const ChatInterface = ({ onAddTransaction, currentCompany, transactions }) => {
 
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
-
-            if (text.includes('resumo') || text.includes('saldo') || text.includes('como estamos')) {
+            if (text.includes('resumo') || text.includes('saldo')) {
                 const fins = calculateFinancials(transactions, companyType);
-                botResponse.text = `📊 *Panorama Atual*\n\n💰 Entradas: ${safeCurrency(fins.receita)}\n💸 Saídas: ${safeCurrency(fins.totalSaidas)}\n\n📉 *Saldo Final: ${safeCurrency(fins.fluxoCaixa)}*`;
-            } 
-            else {
+                botResponse.text = `📊 *Resumo*\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo: ${safeCurrency(fins.fluxoCaixa)}`;
+            } else {
                 const amountMatch = text.match(/\d+([.,]\d+)?/);
                 if (amountMatch) {
                     const amount = parseFloat(amountMatch[0].replace(',', '.'));
                     let type = '';
-                    let typeLabel = '';
-                    
-                    if (['recebi', 'ganhei', 'venda', 'entrada', 'receita'].some(w => text.includes(w))) {
+                    if (['recebi', 'ganhei', 'venda', 'entrada'].some(w => text.includes(w))) {
                         type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
-                        typeLabel = 'Receita';
-                    } else if (['gastei', 'paguei', 'saída', 'compra', 'custo'].some(w => text.includes(w))) {
-                        if (text.includes('imposto')) type = companyType === 'personal' ? TransactionTypePersonal.DIVIDAS : TransactionTypeBusiness.IMPOSTOS;
-                        else if (text.includes('juro') || text.includes('multa')) type = companyType === 'personal' ? TransactionTypePersonal.DIVIDAS : TransactionTypeBusiness.JUROS_FINANCEIROS;
-                        else type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
-                        typeLabel = 'Despesa';
+                    } else if (['gastei', 'paguei', 'saída', 'compra'].some(w => text.includes(w))) {
+                        type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; // Default genérico
                     }
 
                     if (type) {
                         const desc = text.replace(amountMatch[0], '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$)/g, '').trim();
-                        
-                        await onAddTransaction({
-                            desc: desc || 'Lançamento via Chat',
-                            amount,
-                            type,
-                            subcategory: '', 
-                            date: new Date()
-                        });
-                        botResponse.text = `✅ Feito! Lancei *${safeCurrency(amount)}* como ${typeLabel} ("${desc || 'Geral'}").`;
+                        await onAddTransaction({ desc: desc || 'Via Chat', amount, type, subcategory: '', date: new Date() });
+                        botResponse.text = `✅ Lançado: ${safeCurrency(amount)} em ${desc || 'Geral'}.`;
                     } else {
-                        botResponse.text = "Entendi o valor, mas não sei se é receita ou despesa. Tente usar 'Recebi' ou 'Gastei'.";
+                        botResponse.text = "Não entendi se é receita ou despesa.";
                     }
                 } else {
-                    botResponse.text = "Não entendi. Tente algo como 'Gastei 50 no almoço' ou peça um 'resumo'.";
+                    botResponse.text = "Não entendi. Tente 'Gastei 50 no almoço'.";
                 }
             }
             setMessages(prev => [...prev, botResponse]);
@@ -228,34 +178,23 @@ const ChatInterface = ({ onAddTransaction, currentCompany, transactions }) => {
     };
 
     return (
-        <div className="flex flex-col h-[600px] bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+        <div className="flex flex-col h-[500px] bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-3 rounded-2xl text-sm whitespace-pre-wrap ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-none shadow-sm'}`}>
-                            {msg.text}
-                        </div>
+                        <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-none shadow-sm'}`}>{msg.text}</div>
                     </div>
                 ))}
                 <div ref={messagesEndRef} />
             </div>
             <div className="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex gap-2">
-                <input 
-                    className="flex-1 bg-slate-100 dark:bg-slate-900 border-0 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
-                    placeholder="Digite aqui... (ex: Gastei 20 em café)"
-                    value={inputText}
-                    onChange={e => setInputText(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSend()}
-                />
-                <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors">
-                    <LucideSend size={18} />
-                </button>
+                <input className="flex-1 bg-slate-100 dark:bg-slate-900 border-0 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="Digite..." value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} />
+                <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full"><LucideSend size={18} /></button>
             </div>
         </div>
     );
 };
 
-// ... (DREView, BudgetPlanningView, CashFlowView, ChartsView, CategoryPieChart, CalculatorModal, ExportModal, PrintLayout, RepeatModal, InstallGuideModal, TutorialModal, Sidebar mantidos) ...
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
@@ -266,10 +205,7 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
 
     const SubcatRows = ({ type, subcatTotals, budgetSubcats, isNegative }) => {
         if (!subcatTotals && !budgetSubcats) return null;
-        const relevantSubcats = new Set([
-            ...Object.keys(subcatTotals || {}).filter(k => k.startsWith(type + ':')).map(k => k.split(':')[1]),
-            ...Object.keys(budgetSubcats || {}).filter(k => k.startsWith(type + ':')).map(k => k.split(':')[1])
-        ]);
+        const relevantSubcats = new Set([...Object.keys(subcatTotals || {}).filter(k => k.startsWith(type + ':')).map(k => k.split(':')[1]), ...Object.keys(budgetSubcats || {}).filter(k => k.startsWith(type + ':')).map(k => k.split(':')[1])]);
         if (relevantSubcats.size === 0) return null;
         return Array.from(relevantSubcats).sort().map(subName => {
             const valReal = subcatTotals[`${type}:${subName}`] || 0;
@@ -282,7 +218,7 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
                 <div key={subName} className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-2 px-4 border-b border-gray-200 text-xs ${isPrintMode ? 'text-black' : 'text-gray-600 dark:text-slate-300 bg-gray-50/50 dark:bg-slate-900/50'}`}>
                     <span className={`${isPrintMode ? 'text-black' : 'text-gray-500 dark:text-slate-400'} pl-6 flex items-center`}>• {subName}</span>
                     <span className={`text-right ${isPrintMode ? 'text-black' : ''}`}>{displayReal}</span>
-                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600 dark:text-green-400') : (isPrintMode ? 'text-black' : 'text-red-500 dark:text-red-400')}`}>{valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
+                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? 'text-green-600' : 'text-red-500'}`}>{valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
                 </div>
             );
         });
@@ -290,39 +226,30 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
 
     const LineItem = ({ label, type, valReal, valMeta, isNegative, isTotal, highlight, canExpand }) => {
         const finalReal = isNegative ? -valReal : valReal;
-        const finalMeta = isNegative ? -(valMeta || 0) : (valMeta || 0);
-        const variacao = finalReal - finalMeta;
+        const variacao = finalReal - (isNegative ? -(valMeta || 0) : (valMeta || 0));
         let displayReal = showPercentage ? safePercent(valReal, real.receita) : safeCurrency(finalReal);
         if (showPercentage && isNegative) displayReal = '-' + displayReal;
-        let textColor = isPrintMode ? 'text-black' : 'text-gray-700 dark:text-slate-200';
-        if (!isPrintMode) {
-            if (highlight) textColor = finalReal >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400';
-            if (isNegative && !highlight && !showPercentage) textColor = 'text-red-600 dark:text-red-400';
-        }
         return (
             <>
-                <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-3 px-4 border-b border-gray-200 dark:border-slate-800 items-center ${isTotal ? (isPrintMode ? 'bg-gray-100 font-bold' : 'bg-gray-50 dark:bg-slate-800/50 font-bold') : ''} ${canExpand && !isPrintMode ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors' : ''}`} onClick={() => canExpand && !isPrintMode && toggleRow(label)}>
-                    <span className={`${isTotal ? 'text-black dark:text-white' : 'text-gray-600 dark:text-slate-300'} ${isPrintMode ? 'text-black' : ''} flex items-center gap-1`}>{canExpand && !isPrintMode && (expandedRows[label] ? <LucideChevronDown size={14} /> : <LucideChevronRight size={14} />)}{label}</span>
-                    <span className={`text-right ${textColor} ${isTotal ? 'text-base' : 'text-sm'}`}>{displayReal}</span>
-                    {isMonthly && !showPercentage && <span className={`text-right text-xs font-medium ${isPrintMode ? 'text-black' : ((isNegative ? variacao <= 0 : variacao >= 0) ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400')}`}>{valMeta ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
+                <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-3 px-4 border-b border-gray-200 dark:border-slate-800 items-center ${isTotal ? 'font-bold bg-gray-50 dark:bg-slate-800/50' : ''} ${canExpand ? 'cursor-pointer hover:bg-gray-50' : ''}`} onClick={() => canExpand && toggleRow(label)}>
+                    <span className={`flex items-center gap-1 ${isTotal ? 'text-slate-900 dark:text-white' : 'text-gray-600 dark:text-slate-300'}`}>{canExpand && (expandedRows[label] ? <LucideChevronDown size={14} /> : <LucideChevronRight size={14} />)}{label}</span>
+                    <span className={`text-right ${isTotal ? 'text-base' : 'text-sm'} ${highlight ? (finalReal >= 0 ? 'text-green-600' : 'text-red-600') : 'text-slate-700 dark:text-slate-200'}`}>{displayReal}</span>
+                    {isMonthly && !showPercentage && <span className={`text-right text-xs font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? 'text-green-600' : 'text-red-500'}`}>{valMeta ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
                 </div>
-                {(canExpand && (expandedRows[label] || isPrintMode)) && <SubcatRows type={type} subcatTotals={real.subcatTotals} budgetSubcats={meta.subcategories} isNegative={isNegative} />}
+                {(canExpand && expandedRows[label]) && <SubcatRows type={type} subcatTotals={real.subcatTotals} budgetSubcats={meta.subcategories} isNegative={isNegative} />}
             </>
         );
     };
 
     return (
-        <div className={`${isPrintMode ? 'border-none' : 'bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden relative'}`}>
-            {!isPrintMode && (<div className="absolute top-2 right-2"><button onClick={() => setShowPercentage(!showPercentage)} className={`p-1.5 rounded-md transition-colors flex items-center gap-1 text-xs font-medium ${showPercentage ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'}`} title="Alternar R$ / %"><LucidePercent size={14} />{showPercentage ? 'R$' : '%'}</button></div>)}
-            <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} ${isPrintMode ? 'bg-gray-200 text-black border-b border-gray-300' : 'bg-gray-100 dark:bg-slate-900 text-gray-500 dark:text-slate-400'} text-xs font-bold uppercase py-3 px-4`}><div>Descrição</div><div className="text-right">{showPercentage ? 'Análise (%)' : 'Realizado (R$)'}</div>{isMonthly && !showPercentage && <div className="text-right">Variação</div>}</div>
+        <div className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden relative ${isPrintMode ? 'border-none' : ''}`}>
+            {!isPrintMode && <div className="absolute top-2 right-2"><button onClick={() => setShowPercentage(!showPercentage)} className="p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600"><LucidePercent size={14} className="text-slate-600 dark:text-slate-300"/></button></div>}
+            <div className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} bg-gray-100 dark:bg-slate-900 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase py-3 px-4`}><div>Descrição</div><div className="text-right">{showPercentage ? 'Análise (%)' : 'Realizado (R$)'}</div>{isMonthly && !showPercentage && <div className="text-right">Variação</div>}</div>
             
-            {/* RENDERIZAÇÃO CONDICIONAL BASEADA NO TIPO DE EMPRESA */}
             {companyType === 'personal' ? (
                 <div>
                     <LineItem label="Renda Total" type={TransactionTypePersonal.RECEITA} valReal={real[TransactionTypePersonal.RECEITA]} valMeta={meta[TransactionTypePersonal.RECEITA]} canExpand />
-                    {cats.filter(c => !c.isPositive).map(cat => (
-                        <LineItem key={cat.value} label={`(-) ${cat.label.replace(' (-)', '')}`} type={cat.value} valReal={real[cat.value]} valMeta={meta[cat.value]} isNegative canExpand />
-                    ))}
+                    {cats.filter(c => !c.isPositive).map(cat => <LineItem key={cat.value} label={`(-) ${cat.label.replace(' (-)', '')}`} type={cat.value} valReal={real[cat.value]} valMeta={meta[cat.value]} isNegative canExpand />)}
                     <LineItem label="= SALDO FINAL" valReal={real.fluxoCaixa} isTotal highlight />
                 </div>
             ) : (
@@ -345,68 +272,22 @@ const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, co
     const [localBudget, setLocalBudget] = useState({});
     const [localSubBudget, setLocalSubBudget] = useState({});
     const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
-
-    useEffect(() => {
-        setLocalBudget(budget || {});
-        setLocalSubBudget(budget?.subcategories || {});
-    }, [budget]);
-
+    useEffect(() => { setLocalBudget(budget || {}); setLocalSubBudget(budget?.subcategories || {}); }, [budget]);
     if (!isMonthly) return <div className="p-8 text-center text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700">Selecione um mês específico para planejar o orçamento.</div>;
-
-    const handleMainChange = (type, value) => {
-        setLocalBudget(prev => ({ ...prev, [type]: parseFloat(value) || 0 }));
-    };
-
-    const handleSubChange = (type, subName, value) => {
-        const key = `${type}:${subName}`; const numVal = parseFloat(value) || 0;
-        setLocalSubBudget(prev => {
-            const newSubs = { ...prev, [key]: numVal };
-            const currentTypeSubs = Object.entries(newSubs).filter(([k]) => k.startsWith(type + ':')).reduce((sum, [, val]) => sum + val, 0);
-            setLocalBudget(prevMain => ({ ...prevMain, [type]: currentTypeSubs }));
-            return newSubs;
-        });
-    };
-
-    const handleSave = () => {
-        onSaveBudget({ ...localBudget, subcategories: localSubBudget });
-    };
-
+    const handleMainChange = (type, value) => { setLocalBudget(prev => ({ ...prev, [type]: parseFloat(value) || 0 })); };
+    const handleSubChange = (type, subName, value) => { const key = `${type}:${subName}`; const numVal = parseFloat(value) || 0; setLocalSubBudget(prev => { const newSubs = { ...prev, [key]: numVal }; const currentTypeSubs = Object.entries(newSubs).filter(([k]) => k.startsWith(type + ':')).reduce((sum, [, val]) => sum + val, 0); setLocalBudget(prevMain => ({ ...prevMain, [type]: currentTypeSubs })); return newSubs; }); };
+    const handleSave = () => { onSaveBudget({ ...localBudget, subcategories: localSubBudget }); };
     return (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
             <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><LucideTarget className="text-indigo-600 dark:text-indigo-400" /> Planejamento {companyType === 'personal' ? 'Pessoal' : 'Empresarial'}</h2>
-            <div className="space-y-8">
-                {cats.map(cat => (
-                    <div key={cat.value} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-700 break-inside-avoid">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className={`font-bold text-sm uppercase ${cat.color.split(' ')[0]}`}>{cat.label}</h3>
-                            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-40">
-                                <span className="pl-3 text-slate-400 text-sm">R$</span>
-                                <input type="number" value={localBudget[cat.value] || ''} onChange={e => handleMainChange(cat.value, e.target.value)} className="w-full p-2 text-right outline-none font-semibold text-slate-700 dark:text-slate-200 bg-transparent" placeholder="0,00" />
-                            </div>
-                        </div>
-                        {subcategories[cat.value]?.length > 0 && (
-                            <div className="pl-4 space-y-2 border-l-2 border-slate-200 dark:border-slate-700 ml-2">
-                                {subcategories[cat.value].map(sub => (
-                                    <div key={sub.id} className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-600 dark:text-slate-400">{sub.name}</span>
-                                        <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-32 h-8">
-                                            <span className="pl-2 text-slate-400 text-xs">R$</span>
-                                            <input type="number" value={localSubBudget[`${cat.value}:${sub.name}`] || ''} onChange={e => handleSubChange(cat.value, sub.name, e.target.value)} className="w-full p-1 text-right outline-none text-sm text-slate-600 dark:text-slate-300 bg-transparent" placeholder="0,00" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
+            <div className="space-y-8">{cats.map(cat => (<div key={cat.value} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-700 break-inside-avoid"><div className="flex justify-between items-center mb-3"><h3 className={`font-bold text-sm uppercase ${cat.color.split(' ')[0]}`}>{cat.label}</h3><div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-40"><span className="pl-3 text-slate-400 text-sm">R$</span><input type="number" value={localBudget[cat.value] || ''} onChange={e => handleMainChange(cat.value, e.target.value)} className="w-full p-2 text-right outline-none font-semibold text-slate-700 dark:text-slate-200 bg-transparent" placeholder="0,00" /></div></div>{subcategories[cat.value]?.length > 0 && (<div className="pl-4 space-y-2 border-l-2 border-slate-200 dark:border-slate-700 ml-2">{subcategories[cat.value].map(sub => (<div key={sub.id} className="flex justify-between items-center text-sm"><span className="text-slate-600 dark:text-slate-400">{sub.name}</span><div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-32 h-8"><span className="pl-2 text-slate-400 text-xs">R$</span><input type="number" value={localSubBudget[`${cat.value}:${sub.name}`] || ''} onChange={e => handleSubChange(cat.value, sub.name, e.target.value)} className="w-full p-1 text-right outline-none text-sm text-slate-600 dark:text-slate-300 bg-transparent" placeholder="0,00" /></div></div>))}</div>)}</div>))}</div>
             <button onClick={handleSave} className="w-full mt-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">SALVAR METAS</button>
         </div>
     );
 };
 
-const CashFlowView = ({ transactions, isPrintMode }) => {
-    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions), [transactions]);
+const CashFlowView = ({ transactions, isPrintMode, companyType }) => {
+    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
     if (isPrintMode) {
         return (
             <div className="grid grid-cols-3 gap-4 border border-gray-300 p-4 text-center">
@@ -470,17 +351,7 @@ const CategoryPieChart = ({ transactions, type }) => {
             <div className="flex-1 flex justify-center items-center relative">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Pie 
-                            data={data} 
-                            cx="50%" 
-                            cy="50%" 
-                            innerRadius={50} 
-                            outerRadius={70} 
-                            paddingAngle={3} 
-                            dataKey="value" 
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            labelLine={true}
-                        >
+                        <Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={true}>
                             {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                         </Pie>
                         <Tooltip formatter={(value) => safeCurrency(value)} />
@@ -505,6 +376,23 @@ const ExportModal = ({ onClose, csvContent, fileName }) => {
                 <p className="text-sm text-slate-600 dark:text-slate-300">1. Clique em <strong>Copiar Dados</strong>.<br/>2. Abra o Excel ou Planilhas Google.<br/>3. Cole (Ctrl+V).</p>
                 <textarea ref={textAreaRef} readOnly value={csvContent} className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-mono outline-none focus:border-indigo-500 resize-none dark:text-slate-300" />
                 <button onClick={handleCopy} className={`w-full py-4 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 text-lg shadow-lg ${copied ? 'bg-green-600 scale-105' : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105'}`}>{copied ? <><LucideCheckCircle size={24} /> DADOS COPIADOS!</> : <><LucideCopy size={24} /> COPIAR DADOS AGORA</>}</button>
+            </div>
+        </div>
+    );
+};
+
+const CalculatorModal = ({ onClose, onConfirm }) => {
+    const [expression, setExpression] = useState('');
+    const handleBtnClick = (val) => { if (val === 'C') { setExpression(''); } else if (val === '=') { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); const result = eval(sanitized); setExpression(String(result)); } catch (e) { setExpression('Erro'); setTimeout(() => setExpression(''), 1000); } } else { setExpression(prev => prev + val); } };
+    const handleConfirm = () => { let finalVal = expression; if (/[+\-x÷]/.test(expression)) { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); finalVal = String(eval(sanitized)); } catch (e) { return; } } onConfirm(finalVal.replace('.', ',')); };
+    const btns = ['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden" style={{zIndex: 9999}}>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6">
+                <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">Calculadora</h3><button onClick={onClose}><LucideX className="text-slate-400 hover:text-slate-600" /></button></div>
+                <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl mb-4 text-right text-2xl font-mono font-bold text-slate-800 dark:text-white overflow-x-auto">{expression || '0'}</div>
+                <div className="grid grid-cols-4 gap-2 mb-4">{btns.map(b => (<button key={b} onClick={() => handleBtnClick(b)} className={`p-4 rounded-xl font-bold text-lg transition-colors ${['C'].includes(b) ? 'bg-red-100 text-red-600 hover:bg-red-200' : ['÷','x','-','+'].includes(b) ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{b}</button>))}<button onClick={() => handleBtnClick('=')} className="col-span-4 bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-white p-3 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-500">=</button></div>
+                <button onClick={handleConfirm} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">USAR ESTE VALOR</button>
             </div>
         </div>
     );
@@ -780,6 +668,7 @@ export default function App() {
     };
 
     const handleSaveTransaction = async (e) => { e.preventDefault(); if (!currentCompany) { alert("Selecione uma empresa."); return; } const val = parseFloat(formAmount.replace(',', '.')); const parts = formDate.split('-'); const selectedDate = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0)); if (!val || !user || isNaN(selectedDate.getTime())) return; try { const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`); const data = { desc: formDesc, amount: val, type: formType, subcategory: formSubcat, createdAt: Timestamp.fromDate(selectedDate) }; if (editingTransaction) { await updateDoc(doc(collectionRef, editingTransaction.id), { ...data, editedAt: Timestamp.now() }); } else { 
+        // Lógica de Recorrência Integrada
         if (isRecurring && recurringMonths > 1) {
             const batch = writeBatch(db);
             for (let i = 0; i < recurringMonths; i++) {
@@ -843,7 +732,7 @@ export default function App() {
             {repeatingTransaction && <RepeatModal onClose={() => setRepeatingTransaction(null)} onConfirm={confirmRepeat} transaction={repeatingTransaction} />}
             {showCalculator && <CalculatorModal onClose={() => setShowCalculator(false)} onConfirm={handleCalculatorFinish} />}
             
-            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={currentCompany?.type || 'business'} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={currentCompany?.type || 'business'} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
+            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={companyType} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={companyType} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
             
             <Sidebar 
                 isOpen={showSidebar} 
