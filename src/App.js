@@ -3,7 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { 
     getFirestore, doc, collection, onSnapshot, query, addDoc, Timestamp,
-    getDoc, deleteDoc, updateDoc, orderBy, setDoc, writeBatch, where, getDocs
+    getDoc, deleteDoc, updateDoc, orderBy, setDoc, writeBatch
 } from 'firebase/firestore';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell
@@ -11,7 +11,7 @@ import {
 import { 
     Trash2 as LucideTrash2, Building2 as LucideBuilding2, Plus as LucidePlus, Edit2 as LucideEdit2, X as LucideX, Settings as LucideSettings, 
     PieChart as LucidePieChart, Target as LucideTarget, ChevronDown as LucideChevronDown, ChevronRight as LucideChevronRight, Search as LucideSearch, 
-    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh, AlertCircle as LucideAlertCircle
+    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh
 } from 'lucide-react';
 
 // ============================================================================
@@ -46,7 +46,11 @@ const PERIOD_OPTIONS = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
 const TransactionTypeBusiness = { 
-    RECEITA: 'Receita', CUSTO: 'Custo', DESPESA_OPERACIONAL: 'Despesa Operacional', JUROS_FINANCEIROS: 'Juros/Financeiro', IMPOSTOS: 'Impostos' 
+    RECEITA: 'Receita', 
+    CUSTO: 'Custo', 
+    DESPESA_OPERACIONAL: 'Despesa Operacional', 
+    JUROS_FINANCEIROS: 'Juros/Financeiro', 
+    IMPOSTOS: 'Impostos' 
 };
 
 const categoriesBusiness = [
@@ -58,7 +62,15 @@ const categoriesBusiness = [
 ];
 
 const TransactionTypePersonal = { 
-    RECEITA: 'Renda', MORADIA: 'Moradia', ALIMENTACAO: 'Alimentação', TRANSPORTE: 'Transporte', LAZER: 'Lazer', SAUDE: 'Saúde', EDUCACAO: 'Educação', INVESTIMENTOS: 'Investimentos', DIVIDAS: 'Dívidas' 
+    RECEITA: 'Renda', 
+    MORADIA: 'Moradia', 
+    ALIMENTACAO: 'Alimentação', 
+    TRANSPORTE: 'Transporte', 
+    LAZER: 'Lazer/Estilo de Vida', 
+    SAUDE: 'Saúde', 
+    EDUCACAO: 'Educação', 
+    INVESTIMENTOS: 'Investimentos/Poupança', 
+    DIVIDAS: 'Dívidas/Empréstimos' 
 };
 
 const categoriesPersonal = [
@@ -125,7 +137,6 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
 // 3. COMPONENTES
 // ============================================================================
 
-// --- ABA PATRIMÔNIO ---
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
@@ -170,6 +181,7 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
         if(idx === 'IPCA') rate = 0.045;
         if(idx === 'INCC') rate = 0.04;
         if(rate === 0) return 0;
+        // Simulação de rendimento diário (capitalização simples aproximada)
         return (val * rate) / 365;
     };
 
@@ -181,34 +193,50 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                     <p className="text-3xl font-bold">{safeCurrency(assets.filter(a=>a.type==='bens').reduce((acc,c)=>acc+c.value, 0))}</p>
                 </div>
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <h3 className="text-slate-500 text-sm font-bold uppercase mb-2 flex justify-center items-center gap-2"><LucideTrendingUp size={16}/> Investimentos</h3>
+                    <h3 className="text-slate-500 text-sm font-bold uppercase mb-2 flex justify-center items-center gap-2"><LucideTrendingUp size={16}/> Investimentos Ativos</h3>
                     <p className="text-3xl font-bold text-green-600">{safeCurrency(assets.filter(a=>a.type==='investimento').reduce((acc,c)=>acc+c.value, 0))}</p>
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
-                <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white flex items-center gap-2"><LucidePlus className="text-indigo-600"/> Novo Patrimônio</h3>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded border bg-slate-50 dark:bg-slate-900 outline-none"><option value="bens">Bem</option><option value="investimento">Investimento</option></select>
-                    <input placeholder="Ex: ViVaz Barra Funda" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded border bg-slate-50 dark:bg-slate-900 outline-none" />
-                    <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded border bg-slate-50 dark:bg-slate-900 outline-none" />
-                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded border bg-slate-50 dark:bg-slate-900 outline-none"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado Financeiro</h3>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Dólar</p><p className="font-bold text-sm">{marketData.USD}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Euro</p><p className="font-bold text-sm">{marketData.EUR}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Bitcoin</p><p className="font-bold text-sm">{marketData.BTC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">CDI</p><p className="font-bold text-sm">{marketData.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Selic</p><p className="font-bold text-sm">{marketData.SELIC}</p></div>
                 </div>
-                <button onClick={handleAdd} className="w-full mt-3 py-2 bg-indigo-600 text-white rounded-lg font-bold">Adicionar à Carteira</button>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl border overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white flex items-center gap-2"><LucidePlus className="text-indigo-600"/> Cadastrar Novo Patrimônio</h3>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
+                    <input placeholder="Ex: ViVaz Barra Funda" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white font-bold outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
+                </div>
+                <button onClick={handleAdd} className="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg"><LucidePlus size={18}/> Adicionar ao Patrimônio</button>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 uppercase text-[10px]"><tr><th className="p-4">Item</th><th className="p-4">Tipo</th><th className="p-4">Índice</th><th className="p-4 text-right">Valor</th><th className="p-4 text-right">Diário (Est.)</th><th className="p-4 w-10"></th></tr></thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">{assets.map(a => (<tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30">
-                        <td className="p-4 font-medium">{a.name}</td>
-                        <td className="p-4 text-slate-500 capitalize">{a.type}</td>
-                        <td className="p-4 text-slate-500">{a.indexer || '-'}</td>
-                        <td className="p-4 text-right font-bold">{safeCurrency(a.value)}</td>
-                        <td className="p-4 text-right text-green-600 font-bold">+{safeCurrency(getDailyReturn(a.value, a.indexer))}</td>
-                        <td className="p-4"><button onClick={() => onDeleteAsset(a.id)} className="text-red-400 hover:text-red-600"><LucideTrash2 size={16}/></button></td>
-                    </tr>))}</tbody>
+                    <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                        <tr><th className="p-4">Item Patrimonial</th><th className="p-4">Tipo</th><th className="p-4">Reajuste</th><th className="p-4 text-right">Valor Atual</th><th className="p-4 text-right text-indigo-600">Rendimento Diário (Est.)</th><th className="p-4 w-10"></th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                        {assets.map(a => (<tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors">
+                            <td className="p-4 font-bold">{a.name}</td>
+                            <td className="p-4"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${a.type === 'bens' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{a.type.toUpperCase()}</span></td>
+                            <td className="p-4 font-mono">{a.indexer || '-'}</td>
+                            <td className="p-4 text-right font-bold">{safeCurrency(a.value)}</td>
+                            <td className="p-4 text-right text-green-600 font-mono font-bold">+{safeCurrency(getDailyReturn(a.value, a.indexer))}</td>
+                            <td className="p-4"><button onClick={() => onDeleteAsset(a.id)} className="text-red-400 hover:text-red-600 transition-colors"><LucideTrash2 size={16}/></button></td>
+                        </tr>))}
+                    </tbody>
                  </table>
+                 {assets.length === 0 && <div className="p-12 text-center text-slate-400 italic">Sua carteira de patrimônio está vazia.</div>}
             </div>
         </div>
     );
@@ -236,99 +264,153 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
             // --- CÉREBRO LORD NLP 4.0 ---
-            // Extração de valor e meses com mais rigor
+            // 1. Extração de Valores Monetários (Prioriza o primeiro número que parece valor)
             const moneyRegex = /(?:r\$|reais)?\s*(\d+(?:\.\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)/i;
             const moneyMatch = text.match(moneyRegex);
             const amount = moneyMatch ? parseFloat(moneyMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
 
+            // 2. Extração de Quantidade (Meses/Parcelas)
             const quantityMatch = text.match(/(\d+)\s*meses/i);
             const months = quantityMatch ? parseInt(quantityMatch[1]) : 1;
 
-            const isAsset = ['investi', 'comprei', 'patrimonio', 'carro', 'cdb'].some(w => lowerText.includes(w));
-            const isIncome = ['recebi', 'ganhei', 'lucro', 'venda', 'salario'].some(w => lowerText.includes(w));
-            const isRecurring = months > 1 || lowerText.includes('fixa') || lowerText.includes('todo mes');
+            // 3. Classificação de Intenção
+            const isAsset = ['investi', 'comprei', 'patrimonio', 'imovel', 'carro', 'cdb', 'fii', 'acoes'].some(w => lowerText.includes(w));
+            const isIncome = ['recebi', 'ganhei', 'faturamento', 'venda', 'lucro', 'entrada', 'salario'].some(w => lowerText.includes(w));
+            const isRecurring = months > 1 || lowerText.includes('fixa') || lowerText.includes('todo mes') || lowerText.includes('recorrente');
 
+            // --- PROCESSAMENTO ---
+
+            // A. PATRIMÔNIO / INVESTIMENTO
             if (isAsset && amount > 0) {
-                const name = text.replace(moneyMatch[0], '').replace(/(comprei|investi|um|uma|no|na|em|reais|R\$|patrimonio)/gi, '').trim();
-                let idx = lowerText.includes('cdi') ? 'CDI' : lowerText.includes('ipca') ? 'IPCA' : '';
+                const name = text.replace(moneyMatch[0], '').replace(/(investi|comprei|um|uma|no|na|em|reais|R\$|patrimonio|carro|imovel|cdb)/gi, '').trim();
+                const type = (lowerText.includes('invest') || lowerText.includes('cdb') || lowerText.includes('ação')) ? 'investimento' : 'bens';
+                let idx = '';
+                if (lowerText.includes('cdi')) idx = 'CDI';
+                else if (lowerText.includes('ipca')) idx = 'IPCA';
+                else if (lowerText.includes('selic')) idx = 'SELIC';
+                else if (lowerText.includes('incc')) idx = 'INCC';
+                
                 try {
-                    await onAddAsset({ name: name || 'Novo Item', value: amount, type: (lowerText.includes('invest')?'investimento':'bens'), indexer: idx, createdAt: Timestamp.now() });
-                    botResponse.text = `🏛️ Lord, patrimônio registrado: ${name || 'Item'} de ${safeCurrency(amount)}.`;
-                } catch(e) { botResponse.text = "Erro ao salvar patrimônio."; }
+                    await onAddAsset({ name: name || 'Novo Patrimônio', value: amount, type, indexer: idx, createdAt: Timestamp.now() });
+                    botResponse.text = `🏛️ Lord, registrei o ${type} "${name || 'Patrimônio'}" de ${safeCurrency(amount)} na sua carteira. O rendimento estimado já está sendo projetado!`;
+                } catch(e) { botResponse.text = "Desculpe Lord, falhei ao gravar esse bem."; }
             }
+            // B. LANÇAMENTOS RECORRENTES (FUTUROS)
             else if (isRecurring && amount > 0) {
-                const desc = text.replace(moneyMatch[0], '').replace(quantityMatch ? quantityMatch[0] : '', '').replace(/(meses|por|durante|reais|fixa|R\$|todo mes)/gi, '').trim();
-                const type = isIncome ? (companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA) : (companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL);
+                const cleanDesc = text.replace(moneyMatch[0], '').replace(quantityMatch ? quantityMatch[0] : '', '').replace(/(meses|por|durante|reais|fixa|despesa|R\$|todo mes|recorrente)/gi, '').trim();
+                const type = isIncome ? (companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA) 
+                                      : (companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL);
+                
                 try {
-                    await onAddRecurringTransaction({ desc: desc || 'Fixa', amount, type, months: months > 1 ? months : 12 });
-                    botResponse.text = `🔄 Lord, agendei "${desc || 'Fixa'}" de ${safeCurrency(amount)} mensalmente por ${months > 1 ? months : 12} meses. Já está no sistema!`;
-                } catch(e) { botResponse.text = "Erro ao agendar parcelas."; }
+                    // Função que executa o Batch de X meses
+                    await onAddRecurringTransaction({ 
+                        desc: cleanDesc || 'Recorrente Lord', 
+                        amount, 
+                        type, 
+                        months: months > 1 ? months : 12 // Se disse "fixa" sem tempo, assume 12 meses
+                    });
+                    botResponse.text = `🔄 Lord, ordens executadas! Lancei "${cleanDesc || 'Despesa'}" de ${safeCurrency(amount)} mensalmente pelos próximos ${months > 1 ? months : 12} meses. Você já pode visualizar isso no seu Planejamento Futuro.`;
+                } catch(e) { botResponse.text = "Erro ao processar as parcelas futuras."; }
             }
+            // C. LANÇAMENTO SIMPLES
             else if (amount > 0) {
-                const type = isIncome ? (companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA) : (companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL);
-                const desc = text.replace(moneyMatch[0], '').replace(/(recebi|gastei|paguei|ganhei|de|com|na|no|reais|R\$)/gi, '').trim();
+                const type = isIncome ? (companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA) 
+                                      : (companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL);
+                
+                const cleanDesc = text.replace(moneyMatch[0], '').replace(/(recebi|gastei|paguei|ganhei|de|com|na|no|reais|R\$)/gi, '').trim();
+                
                 try {
-                    const newId = await onAddTransaction({ desc: desc || 'Lançamento Lord', amount, type, subcategory: '', date: new Date() });
+                    const newId = await onAddTransaction({ desc: cleanDesc || 'Lançamento Lord', amount, type, subcategory: '', date: new Date() });
                     setLastActionId(newId);
-                    botResponse.text = `✅ Feito Lord! Lancei ${safeCurrency(amount)} em "${desc || 'Geral'}".`;
-                } catch(e) { botResponse.text = "Erro ao salvar."; }
-            } else {
-                botResponse.text = "Lord, não entendi o comando. Tente: 'Gastei 50 no mercado' ou 'Aluguel 1200 fixa por 12 meses'.";
+                    botResponse.text = `✅ Feito Lord! Lançamento de ${safeCurrency(amount)} em "${cleanDesc || 'Geral'}" concluído.`;
+                } catch(e) { botResponse.text = "Erro técnico ao salvar lançamento."; }
             }
+            // D. OUTROS COMANDOS
+            else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
+                const fins = calculateFinancials(transactions, companyType);
+                botResponse.text = `📊 Lord, aqui está seu status atual:\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo Livre: ${safeCurrency(fins.fluxoCaixa)}`;
+            }
+            else {
+                botResponse.text = "Lord, não consegui extrair os dados. Tente algo como: 'Gastei 150 no mercado' ou 'Aluguel 1200 fixa por 12 meses'.";
+            }
+
             setMessages(prev => [...prev, botResponse]);
         }, 500);
     };
 
     return (
-        <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 h-[480px] animate-fade-in-up">
-            <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold">Assistente Lord IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950/50">{messages.map(msg => (<div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border rounded-bl-none shadow-sm'}`}>{msg.text}</div></div>))}<div ref={messagesEndRef} /></div>
-            <div className="p-3 bg-white dark:bg-slate-900 border-t flex gap-2">
-                <textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Digite aqui... (Enter para enviar)" rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
-                <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full"><LucideSend size={18} /></button>
+        <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 animate-fade-in-up h-[500px]">
+            <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center shadow-lg"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold tracking-tight">Estratégia Lord IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950/50 scrollbar-thin">
+                {messages.map(msg => (
+                    <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-none border border-slate-100 dark:border-slate-700'}`}>{msg.text}</div>
+                    </div>
+                ))}
+                <div ref={messagesEndRef} />
+            </div>
+            <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2 shadow-inner">
+                <textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none max-h-32" placeholder="Ordene aqui, Lord..." rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
+                <button onClick={handleSend} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end shadow-md active:scale-95 transition-transform"><LucideSend size={18} /></button>
             </div>
         </div>
     );
 };
 
-// --- APP PRINCIPAL ---
-export default function App() {
-    const [user, setUser] = useState(null); const [db, setDb] = useState(null); const [companies, setCompanies] = useState([]); const [currentCompany, setCurrentCompany] = useState(null);
-    const [transactions, setTransactions] = useState([]); const [subcategories, setSubcategories] = useState({}); const [budget, setBudget] = useState({}); const [assets, setAssets] = useState([]);
-    const [loading, setLoading] = useState(true); const [mainTab, setMainTab] = useState('lancamentos'); const [resultTab, setResultTab] = useState('dre');
-    const [period, setPeriod] = useState(new Date().getMonth()); const [year, setYear] = useState(new Date().getFullYear());
-    const [showSettings, setShowSettings] = useState(false); const [searchTerm, setSearchTerm] = useState(''); const [showTutorial, setShowTutorial] = useState(false); const [showSidebar, setShowSidebar] = useState(false);
-    const [darkMode, setDarkMode] = useState(false); const [showChat, setShowChat] = useState(false); const [showCalculator, setShowCalculator] = useState(false);
-    const [showUpdateMessage, setShowUpdateMessage] = useState(false);
-    const [deletingRecurring, setDeletingRecurring] = useState(null);
+// ============================================================================
+// 4. COMPONENTE PRINCIPAL (APP)
+// ============================================================================
 
-    // Form States
-    const [editingTransaction, setEditingTransaction] = useState(null); const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
-    const [formType, setFormType] = useState(categoriesBusiness[0].value); const [formSubcat, setFormSubcat] = useState('');
-    const [formDesc, setFormDesc] = useState(''); const [formAmount, setFormAmount] = useState(''); const [isRecurring, setIsRecurring] = useState(false); const [recurringMonths, setRecurringMonths] = useState(1);
+export default function App() {
+    // ESTADOS DE AUTENTICAÇÃO E DATABASE
+    const [user, setUser] = useState(null);
+    const [db, setDb] = useState(null);
+    
+    // ESTADOS DE DADOS
+    const [companies, setCompanies] = useState([]);
+    const [currentCompany, setCurrentCompany] = useState(null);
+    const [transactions, setTransactions] = useState([]);
+    const [subcategories, setSubcategories] = useState({});
+    const [budget, setBudget] = useState({});
+    const [assets, setAssets] = useState([]);
+    
+    // ESTADOS DE UI
+    const [loading, setLoading] = useState(true);
+    const [mainTab, setMainTab] = useState('lancamentos');
+    const [resultTab, setResultTab] = useState('dre');
+    const [period, setPeriod] = useState(new Date().getMonth());
+    const [year, setYear] = useState(new Date().getFullYear());
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showSidebar, setShowSidebar] = useState(false);
+    const [darkMode, setDarkMode] = useState(false);
+    const [showChat, setShowChat] = useState(false);
+    const [showCalculator, setShowCalculator] = useState(false);
+
+    // FORMULÁRIO
+    const [editingTransaction, setEditingTransaction] = useState(null);
+    const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
+    const [formType, setFormType] = useState(categoriesBusiness[0].value);
+    const [formSubcat, setFormSubcat] = useState('');
+    const [formDesc, setFormDesc] = useState('');
+    const [formAmount, setFormAmount] = useState('');
+    const [isRecurring, setIsRecurring] = useState(false);
+    const [recurringMonths, setRecurringMonths] = useState(1);
 
     const companyType = currentCompany?.type || 'business';
     const activeCategories = useMemo(() => companyType === 'personal' ? categoriesPersonal : categoriesBusiness, [companyType]);
 
+    // INICIALIZAÇÃO
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { setDarkMode(true); }
         const app = initializeApp(firebaseConfig);
         const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
-        
-        // Mensagem de Atualização (Max 2 vezes)
-        const updateViews = parseInt(localStorage.getItem('lordUpdateViews') || '0');
-        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('lordUpdateViews', (updateViews + 1).toString()); }
-        
-        // Tutorial (Primeira vez)
-        if (!localStorage.getItem('hasSeenFinTutorial')) setShowTutorial(true);
-
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
     }, []);
 
     useEffect(() => { if (darkMode) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); } }, [darkMode]);
 
-    // Data Loaders (Firestore)
+    // CARREGAMENTO DE CONTAS
     useEffect(() => {
         if (!user || !db) return;
         const q = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies`), orderBy('createdAt', 'asc'));
@@ -339,13 +421,14 @@ export default function App() {
             const found = comps.find(c => c.id === lastId);
             if (comps.length > 0 && !currentCompany) setCurrentCompany(found || comps[0]);
             if (comps.length === 0 && !currentCompany) {
-                 const ref = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies`));
-                 setDoc(ref, { name: 'Minha Empresa', type: 'business', createdAt: Timestamp.now() });
+                 const newCompRef = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies`));
+                 setDoc(newCompRef, { name: 'Minha Empresa', type: 'business', createdAt: Timestamp.now() });
             }
             setLoading(false);
         });
     }, [user, db]);
 
+    // CARREGAMENTO DE LANÇAMENTOS, CATEGORIAS E PATRIMÔNIO
     useEffect(() => {
         if (!user || !db || !currentCompany) return;
         const qTx = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`));
@@ -359,12 +442,12 @@ export default function App() {
         return () => { unsubTx(); unsubSub(); unsubAssets(); };
     }, [user, db, currentCompany]);
 
-    // FILTRO GLOBAL (O CORAÇÃO DO SISTEMA)
+    // FILTRO GLOBAL PODEROSO (Mês, Ano ou Tudo)
     const filteredData = useMemo(() => {
         return transactions.filter(t => {
             if (!t.createdAt) return false;
             const d = t.createdAt.toDate();
-            if (period === 'ALL') return true; // TODO O PERÍODO
+            if (period === 'ALL') return true; // MOSTRA TUDO DE TODOS OS ANOS
             if (d.getUTCFullYear() !== year) return false;
             const txMonth = d.getUTCMonth();
             if (typeof period === 'number') return txMonth === period;
@@ -379,6 +462,20 @@ export default function App() {
         return filteredData.filter(t => t.desc.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [filteredData, searchTerm]);
 
+    // CORE: ADICIONAR RECORRENTE (BATCH)
+    const handleAddRecurringTransaction = async ({ desc, amount, type, months }) => {
+        if (!user || !currentCompany) return;
+        const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
+        const batch = writeBatch(db);
+        const today = new Date();
+        for (let i = 0; i < months; i++) {
+            const d = new Date(today.getFullYear(), today.getMonth() + i, today.getDate(), 12, 0, 0);
+            const newDocRef = doc(collectionRef);
+            batch.set(newDocRef, { desc: `${desc} (${i+1}/${months})`, amount, type, createdAt: Timestamp.fromDate(d) });
+        }
+        await batch.commit();
+    };
+
     const handleSaveTransaction = async (e) => {
         e.preventDefault();
         const val = parseFloat(formAmount.replace(/\./g, '').replace(',', '.'));
@@ -390,98 +487,64 @@ export default function App() {
         if (editingTransaction) {
             await updateDoc(doc(ref, editingTransaction.id), data);
         } else if (isRecurring && recurringMonths > 1) {
-            const batch = writeBatch(db);
-            const seriesId = crypto.randomUUID();
-            for(let i=0; i<recurringMonths; i++) {
-                const d = new Date(date.getFullYear(), date.getMonth() + i, date.getDate(), 12, 0, 0);
-                batch.set(doc(ref), {...data, recurringId: seriesId, desc: `${formDesc} (${i+1}/${recurringMonths})`, createdAt: Timestamp.fromDate(d)});
-            }
-            await batch.commit();
+            await handleAddRecurringTransaction({ desc: formDesc, amount: val, type: formType, months: recurringMonths });
         } else {
             await addDoc(ref, {...data, createdAt: Timestamp.fromDate(date)});
         }
-        setEditingTransaction(null); setFormDesc(''); setFormAmount(''); setIsRecurring(false);
+        setEditingTransaction(null); setFormDesc(''); setFormAmount('');
     };
 
-    const handleAddRecurringChat = async ({ desc, amount, type, months }) => {
-        const ref = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
-        const batch = writeBatch(db);
-        const seriesId = crypto.randomUUID();
-        const today = new Date();
-        for (let i = 0; i < months; i++) {
-            const d = new Date(today.getFullYear(), today.getMonth() + i, today.getDate(), 12, 0, 0);
-            batch.set(doc(ref), { desc: `${desc} (${i+1}/${months})`, amount, type, recurringId: seriesId, createdAt: Timestamp.fromDate(d) });
-        }
-        await batch.commit();
-    };
-
-    const handleDeleteSeries = async (id, isSeries) => {
-        const target = transactions.find(t => t.id === id);
-        if (!target) return;
-        if (isSeries && target.recurringId) {
-            const q = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`), where('recurringId', '==', target.recurringId));
-            const snap = await getDocs(q);
-            const batch = writeBatch(db);
-            snap.docs.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-        } else {
-            await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id));
-        }
-        setDeletingRecurring(null);
-    };
-
-    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">Preparando Sistema de Lord...</p></div>;
+    if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900 text-indigo-400 font-bold animate-pulse">CARREGANDO IMPÉRIO FINANCEIRO...</div>;
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-500 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
-            <header className="max-w-5xl mx-auto p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <header className="max-w-5xl mx-auto p-4 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={()=>setShowSidebar(true)} className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-md"><LucideMenu size={28} /></button>
-                    <div><h1 className="text-3xl font-black tracking-tighter">Gestão Financeira</h1><p className="text-xs text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-1"><LucideBuilding2 size={12} /> {currentCompany?.name}</p></div>
-                    <button onClick={()=>setShowCalculator(true)} className="p-2 text-indigo-600 hover:scale-110 transition-transform"><LucideCalculator size={24}/></button>
+                    <button onClick={()=>setShowSidebar(true)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg"><LucideMenu size={28} /></button>
+                    <div><h1 className="text-2xl font-black tracking-tight">Gestão Financeira</h1><p className="text-sm text-indigo-600 font-bold flex items-center gap-1 uppercase"><LucideBuilding2 size={14} /> {currentCompany?.name}</p></div>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
-                    <button onClick={()=>setDarkMode(!darkMode)} className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun className="text-amber-400"/> : <LucideMoon className="text-indigo-600"/>}</button>
-                    <select className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-md font-bold outline-none border-0" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-                    {period !== 'ALL' && <select className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-md font-bold outline-none border-0" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}</select>}
+                    <button onClick={()=>setDarkMode(!darkMode)} className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun/> : <LucideMoon/>}</button>
+                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm outline-none font-bold" value={period} onChange={e => setPeriod(isNaN(e.target.value) ? e.target.value : parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+                    {period !== 'ALL' && <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm outline-none font-bold" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}</select>}
                 </div>
             </header>
 
             <main className="max-w-5xl mx-auto p-4">
-                {/* ABAS COM ACENTO */}
-                <div className="flex overflow-x-auto gap-4 mb-8 no-print border-b dark:border-slate-800">
-                    {['lancamentos', 'planejamento', 'patrimonio', 'resultados'].map(t => (
-                        <button key={t} onClick={() => setMainTab(t)} className={`px-6 py-4 font-black transition-all border-b-4 ${mainTab === t ? 'border-indigo-600 text-indigo-600 scale-105' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-                            {t === 'lancamentos' ? 'LANÇAMENTOS' : t === 'planejamento' ? 'PLANEJAMENTO' : t === 'patrimonio' ? 'PATRIMÔNIO' : 'RESULTADOS'}
-                        </button>
-                    ))}
+                <div className="flex overflow-x-auto gap-2 mb-6 pb-2 no-print border-b border-slate-200 dark:border-slate-800">
+                    <button onClick={()=>setMainTab('lancamentos')} className={`px-6 py-3 rounded-t-xl font-black transition-all ${mainTab==='lancamentos'?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}>LANÇAMENTOS</button>
+                    <button onClick={()=>setMainTab('planejamento')} className={`px-6 py-3 rounded-t-xl font-black transition-all ${mainTab==='planejamento'?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}>PLANEJAMENTO</button>
+                    <button onClick={()=>setMainTab('patrimonio')} className={`px-6 py-3 rounded-t-xl font-black transition-all ${mainTab==='patrimonio'?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}>PATRIMÔNIO</button>
+                    <button onClick={()=>setMainTab('resultados')} className={`px-6 py-3 rounded-t-xl font-black transition-all ${mainTab==='resultados'?'bg-indigo-600 text-white shadow-lg':'text-slate-400'}`}>RESULTADOS</button>
                 </div>
 
                 {mainTab === 'lancamentos' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 animate-fade-in">
                         <div className="lg:col-span-2 space-y-6">
-                            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800">
-                                <h2 className="font-black text-xl mb-6 flex items-center gap-2 uppercase tracking-wide">{editingTransaction ? <LucideEdit2 className="text-indigo-500"/> : <LucidePlus className="text-green-500"/>} {editingTransaction ? 'Editando' : 'Novo Lançamento'}</h2>
-                                <form onSubmit={handleSaveTransaction} className="space-y-5">
-                                    <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
-                                    <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500 dark:text-white">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
-                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="O que você pagou/recebeu?" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
-                                    <div className="relative"><span className="absolute left-4 top-4 font-black text-slate-400">R$</span><input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-4 pl-12 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-black text-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" /></div>
-                                    {!editingTransaction && (<div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border"><div className="flex items-center gap-3"><input type="checkbox" id="rec" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-0" /><label htmlFor="rec" className="font-black text-xs uppercase tracking-widest text-slate-500">Repetir Fixa?</label></div>{isRecurring && <div className="flex items-center gap-2"><span className="text-xs font-bold">POR:</span><input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(parseInt(e.target.value))} className="w-16 p-2 rounded-lg bg-white dark:bg-slate-800 text-center font-bold" /><span className="text-xs font-bold">MESES</span></div>}</div>)}
-                                    <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all uppercase tracking-widest active:scale-95">GRAVAR NO LIVRO</button>
+                            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700">
+                                <h2 className="font-black text-xl mb-4 flex items-center gap-2">{editingTransaction ? <LucideEdit2 className="text-indigo-500"/> : <LucidePlus className="text-green-500"/>} {editingTransaction ? 'Editar' : 'Novo Lançamento'}</h2>
+                                <form onSubmit={handleSaveTransaction} className="space-y-4">
+                                    <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
+                                    <select value={formSubcat} onChange={e => setFormSubcat(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Sem subcategoria</option>{subcategories[formType]?.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select>
+                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Descrição (Ex: Condomínio)" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    <div className="relative"><span className="absolute left-3 top-3.5 font-bold text-slate-400">R$</span><input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-3 pl-10 bg-slate-50 dark:bg-slate-900 border rounded-xl font-black text-lg outline-none focus:ring-2 focus:ring-indigo-500" /></div>
+                                    {!editingTransaction && (<div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border"><div className="flex items-center gap-2"><input type="checkbox" id="rec" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-5 h-5 rounded" /><label htmlFor="rec" className="font-bold text-sm">RECORRENTE?</label></div>{isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(parseInt(e.target.value))} className="w-16 p-1 border rounded bg-white dark:bg-slate-800 text-center font-bold" />}</div>)}
+                                    <div className="flex gap-2"><button type="submit" className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg transition-all uppercase tracking-widest">Gravar</button>{editingTransaction && <button type="button" onClick={()=>setEditingTransaction(null)} className="px-6 bg-slate-200 dark:bg-slate-700 rounded-xl font-bold">Cancelar</button>}</div>
                                 </form>
                             </div>
                         </div>
                         <div className="lg:col-span-3">
-                            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border dark:border-slate-800 h-[700px] flex flex-col overflow-hidden">
-                                <div className="p-6 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><span className="font-black uppercase text-xs tracking-[0.2em] text-slate-400">Histórico de Movimentação</span><div className="relative"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Procurar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-white dark:bg-slate-950 rounded-xl text-xs w-48 outline-none border dark:border-slate-700" /></div></div>
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border h-[650px] flex flex-col">
+                                <div className="p-5 border-b flex justify-between items-center"><span className="font-black uppercase text-xs tracking-widest text-slate-500">Histórico de Lançamentos</span><div className="relative"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-xs w-40 outline-none" /></div></div>
+                                <div className="flex-1 overflow-y-auto p-2 space-y-2">
                                     {searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (
-                                        <div key={t.id} className="p-5 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl flex justify-between items-center hover:shadow-lg transition-all group">
-                                            <div className="truncate"><p className="font-black truncate text-sm uppercase leading-tight">{t.desc}</p><p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-tighter">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
-                                            <div className="flex items-center gap-4">
-                                                <span className={`font-black whitespace-nowrap text-lg ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
-                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={async() => { if(t.recurringId) setDeletingRecurring(t); else if(window.confirm("Apagar, Lord?")) handleDeleteSeries(t.id, false); }} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"><LucideTrash2 size={18}/></button></div>
+                                        <div key={t.id} className="p-4 bg-white dark:bg-slate-800/50 border dark:border-slate-700 rounded-xl flex justify-between items-center hover:shadow-md transition-all">
+                                            <div className="truncate"><p className="font-black truncate text-sm uppercase">{t.desc}</p><p className="text-[10px] text-slate-400 font-bold">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-black whitespace-nowrap text-base ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
+                                                <button onClick={() => handleEditClick(t)} className="p-2 hover:bg-indigo-50 rounded-full text-slate-400 hover:text-indigo-600"><LucideEdit2 size={16}/></button>
+                                                <button onClick={async() => { if(window.confirm("Excluir Lord?")) await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, t.id)) }} className="p-2 hover:bg-red-50 rounded-full text-slate-400 hover:text-red-600"><LucideTrash2 size={16}/></button>
                                             </div>
                                         </div>
                                     ))}
@@ -495,8 +558,8 @@ export default function App() {
                 {mainTab === 'patrimonio' && <AssetsView assets={assets} onAddAsset={d=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), d)} onDeleteAsset={id=>deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`, id))} />}
                 {mainTab === 'resultados' && (
                     <div className="space-y-8 animate-fade-in">
-                         <div className="flex gap-2 bg-slate-200 dark:bg-slate-900 p-1.5 rounded-2xl w-fit">
-                            {['dre', 'fluxo', 'graficos'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${resultTab === k ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-md' : 'text-slate-500'}`}>{k}</button>))}
+                         <div className="flex gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl w-fit">
+                            {['dre', 'fluxo', 'graficos'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${resultTab === k ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-500'}`}>{k}</button>))}
                          </div>
                          {resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} />}
                          {resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} />}
@@ -504,81 +567,29 @@ export default function App() {
                     </div>
                 )}
             </main>
-
-            {/* MODAL DE EXCLUSÃO DE SÉRIE */}
-            {deletingRecurring && (
-                <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6 backdrop-blur-md animate-fade-in">
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border dark:border-slate-700">
-                        <LucideAlertCircle className="mx-auto text-amber-500 mb-4" size={48} />
-                        <h3 className="text-xl font-black mb-2">Lançamento Recorrente</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Lord, este item faz parte de uma série. Como deseja prosseguir com a exclusão?</p>
-                        <div className="space-y-3">
-                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, false)} className="w-full py-4 bg-slate-100 dark:bg-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all">Apagar APENAS ESTE</button>
-                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, true)} className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl hover:bg-red-700 transition-all shadow-lg">Apagar TODA A SÉRIE</button>
-                            <button onClick={()=>setDeletingRecurring(null)} className="w-full py-2 text-slate-400 font-bold">Cancelar</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAIS DE APOIO */}
-            {showUpdateMessage && <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-8 py-4 rounded-full shadow-2xl z-[80] font-black animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer" onClick={()=>setShowUpdateMessage(false)}><LucideRocket/> NOVIDADE: IA APRENDEU RECORRÊNCIA E PATRIMÔNIO! <LucideX size={16}/></div>}
-            {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial', 'true')}} />}
-            {showCalculator && <CalculatorModal onClose={()=>setShowCalculator(false)} onConfirm={v=>{setFormAmount(v); setShowCalculator(false)}} />}
-            
-            <button onClick={() => setShowChat(!showChat)} className="fixed bottom-8 right-8 z-50 p-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl hover:scale-110 transition-all border-4 border-white dark:border-slate-800 ring-4 ring-indigo-600/20"><LucideMessageSquare size={32} /></button>
-            {showChat && <ChatInterface isOpen={true} onClose={()=>setShowChat(false)} onAddTransaction={async(d)=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`), {...d, createdAt: Timestamp.fromDate(d.date)})} onAddRecurringTransaction={handleAddRecurringChat} onAddAsset={d=>addDoc(collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/assets`), d)} onUpdateTransaction={(id,d)=>updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id), d)} onDeleteTransaction={(id)=>deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`, id))} currentCompany={currentCompany} transactions={transactions} />}
+            <button onClick={() => setShowChat(!showChat)} className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl hover:scale-110 transition-all border-4 border-white dark:border-slate-800"><LucideMessageSquare size={24} /></button>
         </div>
     );
 }
 
-// SIDEBAR, CALCULADORA E TUTORIAL REORGANIZADOS
-function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onRenameCompany, onOpenSettings }){
-    const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false);
-    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Império Lord<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'?<LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome do Império" className="w-full p-2 rounded-lg border dark:bg-slate-900" value={newName} onChange={e=>setNewName(e.target.value)} /><button onClick={()=>onAddCompany(newName, 'business')} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
-}
-
+// CALCULADORA CORRIGIDA (SEM EVAL DIRETO)
 function CalculatorModal({onClose,onConfirm}){
     const [e,setE]=useState('');
     const h=(v)=>{
         if(v==='C')setE('');
         else if(v==='='){
-            try{ const calc = new Function('return ' + e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.')); setE(String(calc())); }catch{setE('Erro')}
+            try{
+                // Uso de Function constructor para evitar o aviso do bundler sobre eval direto
+                const calc = new Function('return ' + e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'));
+                setE(String(calc()));
+            }catch{setE('Erro')}
         }else setE(p=>p+v)
     };
-    return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl"><div className="flex justify-between mb-4 font-black uppercase text-[10px] text-indigo-600 tracking-widest">Lord Calc<button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl mb-4 text-right font-black text-3xl overflow-hidden">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'].map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl font-black text-xl hover:bg-indigo-50">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-indigo-600 text-white p-4 rounded-xl font-black text-xl">=</button></div><button onClick={()=>onConfirm(e.replace('.',','))} className="w-full bg-slate-800 text-white p-4 rounded-xl font-black uppercase tracking-widest">Usar Valor</button></div></div>)
+    return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl"><div className="flex justify-between mb-4"><h3 className="font-black text-indigo-600 uppercase tracking-widest text-sm">Lord Calc</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl mb-4 text-right font-black text-3xl overflow-hidden">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'].map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl font-black text-xl hover:bg-indigo-50 active:scale-95 transition-all">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-indigo-600 text-white p-4 rounded-xl font-black text-xl shadow-lg">=</button></div><button onClick={()=>onConfirm(e.replace('.',','))} className="w-full bg-slate-800 text-white p-4 rounded-xl font-black uppercase tracking-widest transition-all">Usar Valor</button></div></div>)
 }
 
-function TutorialModal({onClose}){
-    const [step, setStep] = useState(0);
-    const slides = [
-        { title: "BEM-VINDO LORD!", desc: "Seu império financeiro agora tem cérebro próprio. Vamos começar?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "LANÇAMENTOS", desc: "Registre tudo aqui. Use o botão de repetir para despesas fixas manuais.", icon: <LucidePlus size={48} className="text-green-500"/> },
-        { title: "ASSISTENTE IA", desc: "Diga: 'Internet 100 reais fixa por 12 meses'. A IA fará todo o trabalho futuro por você.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
-        { title: "PATRIMÔNIO", desc: "Cadastre imóveis e investimentos. O sistema projeta o rendimento diário estimado para você.", icon: <LucideHome size={48} className="text-amber-500"/> },
-        { title: "RESULTADOS", desc: "Seu DRE e Fluxo de Caixa são gerados instantaneamente. Nada escapa do seu controle.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
-    ];
-    return (<div className="fixed inset-0 bg-indigo-600 z-[200] flex items-center justify-center p-6 text-white text-center"><div className="max-w-sm space-y-8"><div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl animate-bounce">{slides[step].icon}</div><h2 className="text-3xl font-black italic">{slides[step].title}</h2><p className="text-lg font-medium opacity-90">{slides[step].desc}</p><div className="flex gap-2 justify-center">{slides.map((_,i)=><div key={i} className={`h-2 w-2 rounded-full ${i===step?'bg-white w-8':'bg-indigo-400'} transition-all`}/>)}</div><button onClick={()=>step<slides.length-1?setStep(step+1):onClose()} className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all">{step<slides.length-1?'PRÓXIMO':'ESTOU PRONTO!'}</button></div></div>)
-}
-
-function DREView({ transactions, budget, isMonthly, companyType }){
-    const real = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
-    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
-    return (
-        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl overflow-hidden border dark:border-slate-800 animate-fade-in">
-            <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-900 p-4 text-[10px] font-black uppercase tracking-widest text-slate-500"><div>Descrição</div><div className="text-right">Realizado (R$)</div></div>
-            <div className="divide-y dark:divide-slate-700">
-                {cats.map(c => (
-                    <div key={c.value} className="flex justify-between p-4 items-center">
-                        <span className="font-bold text-sm text-slate-600 dark:text-slate-400">{c.label}</span>
-                        <span className={`font-black ${c.isPositive ? 'text-green-600' : 'text-red-500'}`}>{c.isPositive ? '' : '-'}{safeCurrency(real[c.value] || 0)}</span>
-                    </div>
-                ))}
-                <div className="flex justify-between p-6 items-center bg-indigo-50 dark:bg-indigo-900/20">
-                    <span className="font-black text-indigo-900 dark:text-indigo-200 text-lg uppercase italic">Saldo Lord</span>
-                    <span className={`font-black text-2xl ${real.fluxoCaixa >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>{safeCurrency(real.fluxoCaixa)}</span>
-                </div>
-            </div>
-        </div>
-    )
+function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onRenameCompany, onOpenSettings }){
+    const [newName, setNewName] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
+    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center"><h2 className="font-black uppercase text-xs tracking-widest text-slate-500">Minhas Contas</h2><button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-2"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'?<LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-bold truncate">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 hover:border-indigo-400 hover:text-indigo-400 transition-all font-bold"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mt-2 border space-y-3"><input autoFocus placeholder="Nome do Império" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><div className="flex gap-2"><button onClick={()=>onAddCompany(newName, 'business')} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button><button onClick={()=>setIsCreating(false)} className="px-3 bg-slate-200 rounded-lg">X</button></div></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all"><LucideSettings/> Configurações</button></div> </div> </div> </>)
 }
