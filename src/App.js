@@ -73,6 +73,8 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
+const transactionCategories = categoriesBusiness; 
+
 // ============================================================================
 // 2. FUNÇÕES AUXILIARES
 // ============================================================================
@@ -185,17 +187,6 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                 </div>
             </div>
 
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
-                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado Financeiro</h3>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Dólar</p><p className="font-bold text-sm">{marketData.USD}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Euro</p><p className="font-bold text-sm">{marketData.EUR}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Bitcoin</p><p className="font-bold text-sm">{marketData.BTC}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">CDI</p><p className="font-bold text-sm">{marketData.CDI}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold uppercase">Selic</p><p className="font-bold text-sm">{marketData.SELIC}</p></div>
-                </div>
-            </div>
-
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                 <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-white flex items-center gap-2"><LucidePlus className="text-indigo-600"/> Cadastrar Novo Patrimônio</h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -261,7 +252,6 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
-            // Lógica de extração de meses vs valor
             const quantityMatch = text.match(/(\d+)\s*meses/i);
             const months = quantityMatch ? parseInt(quantityMatch[1]) : 1;
             let textToSearchMoney = text;
@@ -273,7 +263,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
             const moneyMatch = textToSearchMoney.match(moneyRegex);
             const amount = moneyMatch ? parseFloat(moneyMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
 
-            const isAsset = ['investi', 'comprei', 'patrimonio', 'carro', 'cdb', 'fii', 'acoes'].some(w => lowerText.includes(w));
+            const isAsset = ['investi', 'comprei', 'patrimonio', 'imovel', 'carro', 'cdb', 'fii', 'acoes'].some(w => lowerText.includes(w));
             const isIncome = ['recebi', 'ganhei', 'faturamento', 'venda', 'lucro', 'entrada', 'salario'].some(w => lowerText.includes(w));
             const isRecurring = months > 1 || lowerText.includes('fixa') || lowerText.includes('todo mes');
 
@@ -324,7 +314,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
                 <div ref={messagesEndRef} />
             </div>
             <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2 shadow-inner">
-                <textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none max-h-32" placeholder="Digite aqui..." rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
+                <textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none max-h-32" placeholder="Dê a sua ordem..." rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
                 <button onClick={handleSend} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end shadow-md transition-all active:scale-95"><LucideSend size={18} /></button>
             </div>
         </div>
@@ -337,11 +327,13 @@ const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, co
     const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
 
     useEffect(() => {
-        setLocalBudget(budget || {});
-        setLocalSubBudget(budget?.subcategories || {});
+        if (budget) {
+            setLocalBudget(budget || {});
+            setLocalSubBudget(budget?.subcategories || {});
+        }
     }, [budget]);
 
-    if (!isMonthly) return <div className="p-12 text-center text-slate-400 font-medium bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed">Selecione um mês para planear as metas do seu império.</div>;
+    if (!isMonthly) return <div className="p-12 text-center text-slate-400 font-medium bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed">Selecione um mês para planejar as metas financeiras.</div>;
 
     const handleMainChange = (type, value) => setLocalBudget(prev => ({ ...prev, [type]: parseFloat(value) || 0 }));
     const handleSubChange = (type, subName, value) => {
@@ -357,7 +349,7 @@ const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, co
 
     return (
         <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border shadow-sm animate-fade-in">
-            <h2 className="text-xl font-black mb-8 flex items-center gap-3 text-slate-800 dark:text-white uppercase tracking-tighter"><LucideTarget className="text-indigo-600" /> Metas Orçamentárias</h2>
+            <h2 className="text-xl font-black mb-8 flex items-center gap-3 text-slate-800 dark:text-white uppercase tracking-tighter"><LucideTarget className="text-indigo-600" /> Planejamento Orçamentário</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {cats.map(cat => (
                     <div key={cat.value} className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border dark:border-slate-700">
@@ -376,7 +368,7 @@ const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, co
                     </div>
                 ))}
             </div>
-            <button onClick={() => onSaveBudget({ ...localBudget, subcategories: localSubBudget })} className="w-full mt-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95 uppercase tracking-widest">GUARDAR PLANEAMENTO</button>
+            <button onClick={() => onSaveBudget({ ...localBudget, subcategories: localSubBudget })} className="w-full mt-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95 uppercase tracking-widest">GUARDAR PLANEJAMENTO</button>
         </div>
     );
 };
@@ -386,7 +378,7 @@ const DREView = ({ transactions, companyType }) => {
     const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
     return (
         <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl overflow-hidden border dark:border-slate-800 animate-fade-in">
-            <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-900/50 p-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"><div>Descrição da Linha</div><div className="text-right">Realizado (R$)</div></div>
+            <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-900/50 p-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"><div>Descrição</div><div className="text-right">Realizado (R$)</div></div>
             <div className="divide-y dark:divide-slate-700">
                 {cats.map(c => (
                     <div key={c.value} className="flex justify-between p-5 items-center hover:bg-slate-50 dark:hover:bg-slate-900/20 transition-colors">
@@ -395,7 +387,7 @@ const DREView = ({ transactions, companyType }) => {
                     </div>
                 ))}
                 <div className="flex justify-between p-8 items-center bg-indigo-50/50 dark:bg-indigo-900/10">
-                    <span className="font-black text-indigo-950 dark:text-indigo-200 text-xl uppercase italic tracking-tighter">Saldo Acumulado</span>
+                    <span className="font-black text-indigo-950 dark:text-indigo-200 text-xl uppercase italic tracking-tighter">Saldo Total</span>
                     <span className={`font-black text-3xl ${real.fluxoCaixa >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>{safeCurrency(real.fluxoCaixa)}</span>
                 </div>
             </div>
@@ -540,7 +532,17 @@ export default function App() {
         setEditingTransaction(null); setFormDesc(''); setFormAmount(''); setIsRecurring(false);
     };
 
-    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">Preparando o seu sistema...</p></div>;
+    const handleEditClick = (t) => {
+        setMainTab('lancamentos');
+        setEditingTransaction(t);
+        setFormDesc(t.desc);
+        setFormAmount(t.amount.toString().replace('.', ','));
+        setFormType(t.type);
+        setFormSubcat(t.subcategory || '');
+        if (t.createdAt) setFormDate(t.createdAt.toDate().toISOString().split('T')[0]);
+    };
+
+    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">A preparar o seu sistema financeiro...</p></div>;
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-500 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
@@ -548,7 +550,7 @@ export default function App() {
                 <div className="flex items-center gap-4">
                     <button onClick={()=>setShowSidebar(true)} className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-md"><LucideMenu size={28} /></button>
                     <div><h1 className="text-3xl font-black tracking-tighter">Gestão Financeira</h1><p className="text-xs text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-1"><LucideBuilding2 size={12} /> {currentCompany?.name}</p></div>
-                    <button onClick={()=>setShowCalculator(true)} className="p-2 text-indigo-600"><LucideCalculator size={24}/></button>
+                    <button onClick={()=>setShowCalculator(true)} className="p-2 text-indigo-600 hover:scale-110 transition-transform"><LucideCalculator size={24}/></button>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     <button onClick={()=>setDarkMode(!darkMode)} className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun className="text-amber-400"/> : <LucideMoon className="text-indigo-600"/>}</button>
@@ -584,13 +586,16 @@ export default function App() {
                         <div className="lg:col-span-3">
                             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border dark:border-slate-800 h-[700px] flex flex-col overflow-hidden">
                                 <div className="p-6 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><span className="font-black uppercase text-xs tracking-widest text-slate-400">Fluxo de Movimentação</span><div className="relative"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Procurar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-white dark:bg-slate-950 rounded-xl text-xs w-48 outline-none border dark:border-slate-700" /></div></div>
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
                                     {searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (
                                         <div key={t.id} className="p-5 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl flex justify-between items-center group transition-all">
-                                            <div className="truncate"><p className="font-black truncate text-sm uppercase">{t.desc}</p><p className="text-[10px] text-slate-400 font-black mt-1 uppercase">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
+                                            <div className="truncate"><p className="font-black truncate text-sm uppercase leading-tight">{t.desc}</p><p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-tighter">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
                                             <div className="flex items-center gap-4">
                                                 <span className={`font-black whitespace-nowrap text-lg ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
-                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => { if(t.recurringId) setDeletingRecurring(t); else if(window.confirm("Apagar?")) handleDeleteSeries(t.id, false); }} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"><LucideTrash2 size={18}/></button></div>
+                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleEditClick(t)} className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 rounded-xl mr-2"><LucideEdit2 size={18}/></button>
+                                                    <button onClick={() => { if(t.recurringId) setDeletingRecurring(t); else if(window.confirm("Apagar?")) handleDeleteSeries(t.id, false); }} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"><LucideTrash2 size={18}/></button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -618,18 +623,18 @@ export default function App() {
                 <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
                     <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border dark:border-slate-700">
                         <LucideAlertCircle className="mx-auto text-amber-500 mb-4" size={48} />
-                        <h3 className="text-xl font-black mb-2 uppercase">Série Recorrente</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Deseja apagar apenas esta parcela ou toda a sequência futura?</p>
+                        <h3 className="text-xl font-black mb-2 uppercase tracking-tighter">Série Recorrente</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Este item faz parte de uma série. Deseja apagar apenas esta parcela ou toda a sequência futura?</p>
                         <div className="space-y-3">
-                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, false)} className="w-full py-4 bg-slate-100 dark:bg-slate-700 font-bold rounded-2xl">Apagar APENAS ESTE</button>
-                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, true)} className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg">Apagar TODA A SÉRIE</button>
+                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, false)} className="w-full py-4 bg-slate-100 dark:bg-slate-700 font-bold rounded-2xl transition-all">Apagar APENAS ESTE</button>
+                            <button onClick={()=>handleDeleteSeries(deletingRecurring.id, true)} className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg transition-all">Apagar TODA A SÉRIE</button>
                             <button onClick={()=>setDeletingRecurring(null)} className="w-full py-2 text-slate-400 font-bold">Cancelar</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-8 py-4 rounded-full shadow-2xl z-[80] font-black animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer" onClick={()=>setShowUpdateMessage(false)}><LucideRocket/> IA APRENDEU RECORRÊNCIA E PATRIMÔNIO! <LucideX size={16}/></div>}
+            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-8 py-4 rounded-full shadow-2xl z-[80] font-black animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer" onClick={()=>setShowUpdateMessage(false)}><LucideRocket/> NOVIDADE: ASSISTENTE IA APRENDEU RECORRÊNCIA E PATRIMÔNIO! <LucideX size={16}/></div>}
             
             {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v46', 'true')}} />}
             {showCalculator && <CalculatorModal onClose={()=>setShowCalculator(false)} onConfirm={v=>{setFormAmount(v); setShowCalculator(false)}} />}
@@ -640,8 +645,7 @@ export default function App() {
     );
 }
 
-// COMPONENTES AUXILIARES REORGANIZADOS
-function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onRenameCompany, onOpenSettings }){
+function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onOpenSettings }){
     const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false);
     return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Contas Ativas<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><button onClick={()=>onAddCompany(newName, 'business')} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
 }
@@ -654,19 +658,31 @@ function CalculatorModal({onClose,onConfirm}){
             try{ const calc = new Function('return ' + e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.')); setE(String(calc())); }catch{setE('Erro')}
         }else setE(p=>p+v)
     };
-    return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl"><div className="flex justify-between mb-4 font-black uppercase text-[10px] text-indigo-600 tracking-widest">Calculadora IA<button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl mb-4 text-right font-black text-3xl overflow-hidden">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'].map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl font-black text-xl hover:bg-indigo-50">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-indigo-600 text-white p-4 rounded-xl font-black text-xl">=</button></div><button onClick={()=>onConfirm(e.replace('.',','))} className="w-full bg-slate-800 text-white p-4 rounded-xl font-black uppercase tracking-widest">Usar Valor</button></div></div>)
+    return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl"><div className="flex justify-between mb-4 font-black uppercase text-[10px] text-indigo-600 tracking-widest">Calculadora IA<button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl mb-4 text-right font-black text-3xl overflow-hidden">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'].map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl font-black text-xl hover:bg-indigo-50 transition-all">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-indigo-600 text-white p-4 rounded-xl font-black text-xl">=</button></div><button onClick={()=>onConfirm(e.replace('.',','))} className="w-full bg-slate-800 text-white p-4 rounded-xl font-black uppercase tracking-widest transition-all">Usar Valor</button></div></div>)
 }
 
 function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
         { title: "BEM-VINDO!", desc: "Seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "LANÇAMENTOS", desc: "Registre tudo rapidamente. Use a opção de recorrência para despesas fixas.", icon: <LucidePlus size={48} className="text-green-500"/> },
-        { title: "ASSISTENTE IA", desc: "Dê ordens por texto ou voz. 'Internet 100 reais fixa por 12 meses' cria automaticamente os lançamentos futuros.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
-        { title: "PATRIMÔNIO", desc: "Controle bens e investimentos com rendimento diário estimado por índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
+        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registrar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
+        { title: "ASSISTENTE IA", desc: "Dê ordens por texto ou voz ao Assistente IA. Ele entende recorrências e patrimônios automaticamente.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
+        { title: "PATRIMÔNIO", desc: "Registe bens e investimentos. O sistema projeta o rendimento diário estimado para você baseado em índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
         { title: "ESTRATÉGIA", desc: "Analise seu DRE e Fluxo de Caixa. Use 'Todo o Período' para um panorama histórico total.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
     ];
-    return (<div className="fixed inset-0 bg-indigo-600 z-[200] flex items-center justify-center p-6 text-white text-center animate-fade-in"><div className="max-w-sm space-y-8"><div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl animate-bounce">{slides[step].icon}</div><h2 className="text-3xl font-black italic tracking-tighter uppercase">{slides[step].title}</h2><p className="text-lg font-medium opacity-90">{slides[step].desc}</p><div className="flex gap-2 justify-center">{slides.map((_,i)=><div key={i} className={`h-2 w-2 rounded-full ${i===step?'bg-white w-8':'bg-indigo-400'} transition-all`}/>)}</div><button onClick={()=>step<slides.length-1?setStep(step+1):onClose()} className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all">{step<slides.length-1?'PRÓXIMO':'ENTREI NO COMANDO!'}</button></div></div>)
+    return (<div className="fixed inset-0 bg-indigo-600 z-[200] flex items-center justify-center p-6 text-white text-center animate-fade-in"><div className="max-w-sm space-y-8">
+        <div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl animate-bounce">{slides[step].icon}</div>
+        <h2 className="text-3xl font-black italic tracking-tighter uppercase">{slides[step].title}</h2>
+        <p className="text-lg font-medium opacity-90">{slides[step].desc}</p>
+        <div className="flex gap-2 justify-center">
+            {slides.map((_, i) => (
+                <div key={i} className={`h-2 w-2 rounded-full ${i === step ? 'bg-white w-8' : 'bg-indigo-400'} transition-all`} />
+            ))}
+        </div>
+        <button onClick={() => step < slides.length - 1 ? setStep(step + 1) : onClose()} className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all">
+            {step < slides.length - 1 ? 'PRÓXIMO' : 'ENTREI NO COMANDO!'}
+        </button>
+    </div></div>)
 }
 
 function CashFlowView({ transactions, companyType }){
@@ -699,7 +715,7 @@ function ChartsView({ allTransactions, companyType }){
     }, [allTransactions, companyType]);
 
     return (
-        <div className="h-80 bg-white dark:bg-slate-800 p-4 rounded-xl border">
+        <div className="h-80 bg-white dark:bg-slate-800 p-4 rounded-xl border dark:border-slate-700">
             <ResponsiveContainer width="100%" height="100%"><LineChart data={lineData}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="name" fontSize={10} /><YAxis fontSize={10} /><Tooltip formatter={(value) => safeCurrency(value)} /><Legend /><Line type="monotone" dataKey="Saldo" stroke="#4f46e5" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer>
         </div>
     );
