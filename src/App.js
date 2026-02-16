@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 // ============================================================================
-// 1. CONFIGURAÇÕES E CONSTANTES GLOBAIS
+// 1. CONFIGURAÇÕES E CONSTANTES GLOBAIS (ANTI-CRASH)
 // ============================================================================
 
 // --- SUAS CHAVES REAIS DO FIREBASE ---
@@ -41,7 +41,7 @@ const PERIOD_OPTIONS = [
     { value: 'Q3', label: '3º Trimestre' }, { value: 'Q4', label: '4º Trimestre' },
     { value: 'S1', label: '1º Semestre' }, { value: 'S2', label: '2º Semestre' },
     { value: 'Y', label: 'Ano Atual' },
-    { value: 'ALL', label: 'Todo o Período' }
+    { value: 'ALL', label: 'Todo o Período (Todos os Anos)' } // NOVA OPÇÃO
 ];
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
@@ -108,11 +108,12 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// *** VARIÁVEL DE SEGURANÇA OBRIGATÓRIA (EVITA O ERRO FATAL) ***
+// *** VARIÁVEL DE SEGURANÇA OBRIGATÓRIA ***
+// Esta variável garante que o código nunca quebre se tentar acessá-la.
 const transactionCategories = categoriesBusiness; 
 
 // ============================================================================
-// 2. FUNÇÕES AUXILIARES (HELPERS)
+// 2. FUNÇÕES AUXILIARES
 // ============================================================================
 
 const safeCurrency = (value) => { 
@@ -132,7 +133,7 @@ const safePercent = (value, total) => {
     return `${((value / total) * 100).toFixed(1)}%`; 
 };
 
-// Lógica de Cálculo Financeiro
+// Cálculo financeiro unificado
 const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const safeData = Array.isArray(data) ? data : [];
     const cats = type === 'personal' ? categoriesPersonal : categoriesBusiness;
@@ -160,27 +161,27 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     const safeAssets = Array.isArray(assets) ? assets : [];
     const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
     const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
-    const patrimonioLiquido = (totalBens + totalInvest + fluxoCaixa);
+    
+    // Patrimônio: Bens + Investimentos + Saldo em Caixa
+    const patrimonioLiquido = totalBens + totalInvest + fluxoCaixa;
 
     const financials = { receita, totalSaidas, fluxoCaixa, subcatTotals, totalBens, totalInvest, patrimonioLiquido };
     
-    cats.forEach(cat => { 
-        financials[cat.value] = sumByType(cat.value); 
-    });
+    cats.forEach(cat => { financials[cat.value] = sumByType(cat.value); });
     
     if (type === 'business') {
         financials.lucroBruto = receita - financials[TransactionTypeBusiness.CUSTO];
         financials.ebitda = financials.lucroBruto - financials[TransactionTypeBusiness.DESPESA_OPERACIONAL];
         financials.lucroLiquido = financials.ebitda - financials[TransactionTypeBusiness.JUROS_FINANCEIROS] - financials[TransactionTypeBusiness.IMPOSTOS];
     }
-
     return financials;
 };
 
 // ============================================================================
-// 3. SUB-COMPONENTES
+// 3. SUB-COMPONENTES (MÓDULOS)
 // ============================================================================
 
+// --- ABA PATRIMÔNIO & MERCADO ---
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
@@ -202,7 +203,7 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                     const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
                     const jsonHg = await resHg.json();
                     if(jsonHg.results && jsonHg.results[0]) hgData = jsonHg.results[0];
-                } catch(e) { console.log('HG Brasil CORS fallback'); }
+                } catch(e) { console.log('API Limit', e); }
 
                 setMarketData({
                     USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
@@ -251,13 +252,13 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
             </div>
             
             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
-                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado (Ao Vivo)</h3>
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado Hoje</h3>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.USD}</p></div>
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.EUR}</p></div>
                     <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.BTC}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC (a.a)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.SELIC}</p></div>
                 </div>
             </div>
 
@@ -282,18 +283,30 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     );
 };
 
+// --- CHAT INTERFACE AVANÇADA (Versão 2.0) ---
 const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
     const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou seu assistente financeiro.", sender: 'bot' }]);
     const [inputText, setInputText] = useState('');
     const [lastActionId, setLastActionId] = useState(null);
     const messagesEndRef = useRef(null);
     const companyType = currentCompany?.type || 'business';
-    const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
+
+    const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     useEffect(() => { if (isOpen) scrollToBottom(); }, [messages, isOpen]);
 
     const parseValue = (text) => {
         let clean = text.replace(/[^0-9.,-]/g, '');
-        if (clean.includes(',')) { clean = clean.replace(/\./g, '').replace(',', '.'); } else { clean = clean.replace(/\./g, ''); }
+        // Lógica de parser brasileiro robusta
+        if (clean.includes(',') && clean.includes('.')) {
+             // Formato 2.000,00 -> remove ponto, troca virgula por ponto
+             clean = clean.replace(/\./g, '').replace(',', '.');
+        } else if (clean.includes(',')) {
+             // Formato 200,00 -> troca virgula por ponto
+             clean = clean.replace(',', '.');
+        } else {
+             // Formato 2000 ou 2.000 -> remove ponto
+             clean = clean.replace(/\./g, '');
+        }
         return parseFloat(clean);
     };
 
@@ -302,67 +315,70 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
         const text = inputText; const lowerText = text.toLowerCase();
         setMessages(prev => [...prev, { id: Date.now(), text, sender: 'user' }]);
         setInputText('');
-        
+
         setTimeout(async () => {
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
-            // NLP Simples
-            if (lowerText.includes('comprei') || lowerText.includes('investi') || lowerText.includes('adquiri') || lowerText.includes('novo bem') || lowerText.includes('patrimonio') || lowerText.includes('imóvel') || lowerText.includes('carro')) {
+            // 1. RECORRÊNCIA INTELIGENTE (Detecta "12 meses", "fixa")
+            if (lowerText.includes('meses') && (lowerText.includes('por') || lowerText.includes('durante') || lowerText.includes('repetir'))) {
                  const amount = parseValue(text);
-                 const name = text.replace(/[0-9.,]+/, '').replace(/(comprei|investi|adquiri|um|uma|no|na|em|R\$|reais|novo|bem|patrimonio)/gi, '').trim();
+                 const monthsMatch = text.match(/(\d+)\s*meses/);
+                 const months = monthsMatch ? parseInt(monthsMatch[1]) : 12;
+                 
                  if (!isNaN(amount) && amount > 0) {
-                     const type = (lowerText.includes('invest') || lowerText.includes('ação') || lowerText.includes('cdb') || lowerText.includes('tesouro')) ? 'investimento' : 'bens';
+                     const desc = text.replace(/[0-9.,]+/, '').replace(/(meses|por|durante|despesa|fixa|R\$|reais)/gi, '').trim();
+                     // Inferência de categoria
+                     let type = companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL;
+                     
                      try {
-                         await onAddAsset({ name: name || 'Novo Item', value: amount, type, indexer: '', createdAt: Timestamp.now() });
-                         botResponse.text = `🏛️ Patrimônio Adicionado: ${name || 'Item'} de ${safeCurrency(amount)}.`;
-                     } catch(e) { botResponse.text = "Erro ao salvar patrimônio."; }
-                 } else { botResponse.text = "Qual o valor do bem/investimento?"; }
-            }
-            else if (lowerText.includes('meses') && (lowerText.includes('por') || lowerText.includes('durante'))) {
-                const amount = parseValue(text);
-                const monthsMatch = text.match(/(\d+)\s*meses/);
-                const months = monthsMatch ? parseInt(monthsMatch[1]) : 12;
-                
-                if (!isNaN(amount) && amount > 0) {
-                    const desc = text.replace(/[0-9.,]+/, '').replace(/(meses|por|durante|despesa|fixa|R\$|reais)/gi, '').trim();
-                    const type = companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL;
-                    
-                    try {
-                        await onAddRecurringTransaction({ 
-                            desc: desc || 'Despesa Fixa', 
+                         await onAddRecurringTransaction({ 
+                            desc: desc || 'Despesa Recorrente', 
                             amount, 
                             type, 
                             subcategory: 'Fixa', 
                             months 
-                        });
-                        botResponse.text = `🗓️ Agendado! "${desc}" de ${safeCurrency(amount)} será lançado nos próximos ${months} meses.`;
-                    } catch(e) { botResponse.text = "Erro ao agendar recorrência."; }
-                } else { botResponse.text = "Entendi a recorrência, mas qual o valor?"; }
+                         });
+                         botResponse.text = `🗓️ Agendado! "${desc}" de ${safeCurrency(amount)} será lançado automaticamente pelos próximos ${months} meses.`;
+                     } catch(e) { botResponse.text = "Erro ao agendar."; }
+                 } else { botResponse.text = "Entendi que é recorrente, mas preciso do valor."; }
             }
-            else if ((lowerText.includes('corrigir') || lowerText.includes('corrija')) && lastActionId) {
-                const newValue = parseValue(text);
-                if (!isNaN(newValue) && newValue > 0) {
-                    try { await onUpdateTransaction(lastActionId, { amount: newValue }); botResponse.text = `✅ Corrigido! Valor: ${safeCurrency(newValue)}.`; } catch (e) { botResponse.text = "Erro ao corrigir."; }
-                } else { botResponse.text = "Diga o valor correto. Ex: '1500'"; }
-            } 
-            else if (lowerText.includes('apagar') && lowerText.includes('ultimo')) {
-                if (lastActionId) {
-                    try { await onDeleteTransaction(lastActionId); setLastActionId(null); botResponse.text = "🗑️ Último lançamento apagado."; } catch(e) { botResponse.text = "Erro ao apagar."; }
-                } else { botResponse.text = "Nada recente para apagar."; }
+            // 2. PATRIMÔNIO (Investimentos, Bens)
+            else if (['comprei', 'investi', 'adquiri', 'novo bem', 'patrimonio', 'imóvel', 'carro', 'aplicação'].some(w => lowerText.includes(w))) {
+                 const amount = parseValue(text);
+                 const name = text.replace(/[0-9.,]+/, '').replace(/(comprei|investi|adquiri|um|uma|no|na|em|R\$|reais|novo|bem|patrimonio)/gi, '').trim();
+                 
+                 let indexer = '';
+                 if (lowerText.includes('cdi')) indexer = 'CDI';
+                 if (lowerText.includes('ipca')) indexer = 'IPCA';
+                 if (lowerText.includes('selic')) indexer = 'SELIC';
+
+                 if (!isNaN(amount) && amount > 0) {
+                     const type = (lowerText.includes('invest') || lowerText.includes('ação') || lowerText.includes('cdb') || lowerText.includes('tesouro')) ? 'investimento' : 'bens';
+                     try {
+                         await onAddAsset({ name: name || 'Novo Item', value: amount, type, indexer, createdAt: Timestamp.now() });
+                         botResponse.text = `🏛️ Patrimônio: "${name || 'Item'}" de ${safeCurrency(amount)} ${indexer ? `(Indexado ao ${indexer})` : ''} salvo!`;
+                     } catch(e) { botResponse.text = "Erro ao salvar patrimônio."; }
+                 } else { botResponse.text = "Qual o valor do investimento/bem?"; }
             }
-            else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
-                const fins = calculateFinancials(transactions, companyType);
-                botResponse.text = `📊 *Resumo*\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo: ${safeCurrency(fins.fluxoCaixa)}`;
-            } 
+            // 3. LANÇAMENTO SIMPLES (Receita/Despesa)
             else {
                 const amount = parseValue(text);
                 if (!isNaN(amount) && amount > 0) {
                     let type = ''; let typeLabel = '';
+                    
+                    // Detecção de contexto (uma frase só)
                     if (['recebi', 'ganhei', 'venda', 'entrada', 'receita'].some(w => lowerText.includes(w))) {
                         type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA; typeLabel = 'Receita';
-                    } else {
+                    } 
+                    else {
+                        // Assume despesa por padrão se tiver valor e não for receita
                         typeLabel = 'Despesa'; 
-                        type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; // Default
+                        type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
+                        
+                        // Refinamento de subcategoria
+                        if (lowerText.includes('condominio') || lowerText.includes('aluguel')) type = companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL;
+                        if (lowerText.includes('luz') || lowerText.includes('energia')) type = companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL;
+                        if (lowerText.includes('mercado') || lowerText.includes('comida')) type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL;
                     }
 
                     const desc = text.replace(/[0-9.,]+/, '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$|reais)/gi, '').trim();
@@ -371,30 +387,37 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
                         setLastActionId(newId);
                         botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`;
                     } catch(e) { botResponse.text = "Erro ao salvar."; }
+                } else if (lowerText.includes('resumo') || lowerText.includes('saldo')) {
+                     const fins = calculateFinancials(transactions, companyType);
+                     botResponse.text = `📊 *Resumo*\nEntradas: ${safeCurrency(fins.receita)}\nSaídas: ${safeCurrency(fins.totalSaidas)}\nSaldo: ${safeCurrency(fins.fluxoCaixa)}`;
                 } else {
-                    botResponse.text = "Não entendi. Tente 'Gastei 50 no almoço' ou 'Investi 1000 no CDB'.";
+                    botResponse.text = "Não entendi. Tente 'Gastei 50 no almoço' ou 'Investi 1000'.";
                 }
             }
             setMessages(prev => [...prev, botResponse]);
         }, 500);
     };
 
-    const handleKeyDown = (e) => { 
-        if (e.key === 'Enter' && !e.shiftKey) { 
-            e.preventDefault(); 
-        } 
-    }
-    
-    if (!isOpen) return null;
+    // Enter apenas pula linha. Botão envia.
     return (
         <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 animate-fade-in-up h-[450px]">
             <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold">Assistente IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 dark:bg-slate-950/50">{messages.map(msg => (<div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-wrap ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-none shadow-sm border border-slate-100 dark:border-slate-700'}`}>{msg.text}</div></div>))}<div ref={messagesEndRef} /></div>
-            <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-2"><textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none" placeholder="Digite... (Botão envia)" rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={handleKeyDown} /><button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end"><LucideSend size={18} /></button></div>
+            <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-2">
+                <textarea 
+                    className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none" 
+                    placeholder="Digite... (Enter pula linha)" 
+                    rows={1} 
+                    value={inputText} 
+                    onChange={e => setInputText(e.target.value)} 
+                />
+                <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end"><LucideSend size={18} /></button>
+            </div>
         </div>
     );
 };
 
+// ... OUTROS COMPONENTES AUXILIARES (Mantidos da versão estável) ...
 const CalculatorModal=({onClose,onConfirm})=>{const [e,setE]=useState('');const h=(v)=>{if(v==='C')setE('');else if(v==='='){try{setE(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))))}catch{setE('Erro')}}else setE(p=>p+v)};const c=()=>{try{onConfirm(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))).replace('.',','))}catch{}};const b=['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm"><div className="flex justify-between mb-4"><h3 className="font-bold dark:text-white">Calculadora</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-4 rounded mb-4 text-right font-bold dark:text-white text-2xl">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{b.map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded font-bold dark:text-white">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-slate-200 p-3 rounded">=</button></div><button onClick={c} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">USAR</button></div></div>)};
 const RepeatModal=({onClose,onConfirm,transaction})=>{const [c,setC]=useState(1);return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full"><h3 className="font-bold mb-4 dark:text-white">Repetir</h3><input type="number" value={c} onChange={e=>setC(e.target.value)} className="w-full p-2 border rounded mb-4 dark:bg-slate-900 dark:text-white"/><button onClick={()=>onConfirm(c)} className="w-full bg-indigo-600 text-white p-2 rounded">Confirmar</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Cancelar</button></div></div>)};
 const ExportModal=({onClose,csvContent,fileName})=>{const [c,setC]=useState(false);const r=useRef(null);const h=()=>{if(r.current){r.current.select();document.execCommand('copy');setC(true)}};return(<div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"><div className="bg-white p-6 rounded-xl max-w-lg w-full"><h3 className="font-bold text-lg mb-2">Exportar CSV</h3><textarea ref={r} readOnly value={csvContent} className="w-full h-32 p-2 border rounded mb-4 text-xs font-mono"/><button onClick={h} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">{c?'Copiado!':'Copiar'}</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Fechar</button></div></div>)};
@@ -416,7 +439,7 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
     const [showPercentage, setShowPercentage] = useState(false);
     
     const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
-    if (!cats) return null; // Segurança
+    if (!cats) return null; // Proteção contra crash
 
     const real = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
     const meta = useMemo(() => isMonthly && budget ? budget : {}, [budget, isMonthly]);
@@ -431,12 +454,13 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
             const valMeta = budgetSubcats ? (budgetSubcats[`${type}:${subName}`] || 0) : 0;
             const finalReal = isNegative ? -valReal : valReal;
             const displayReal = showPercentage ? safePercent(valReal, real.receita) : safeCurrency(finalReal);
-            const variacao = finalReal - (isNegative ? -valMeta : valMeta);
+            const finalMeta = isNegative ? -valMeta : valMeta;
+            const variacao = finalReal - finalMeta;
             return (
                 <div key={subName} className={`grid ${isMonthly && !showPercentage ? 'grid-cols-3' : 'grid-cols-2'} py-2 px-4 border-b border-gray-200 text-xs ${isPrintMode ? 'text-black' : 'text-gray-600 dark:text-slate-300 bg-gray-50/50 dark:bg-slate-900/50'}`}>
                     <span className={`${isPrintMode ? 'text-black' : 'text-gray-500 dark:text-slate-400'} pl-6 flex items-center`}>• {subName}</span>
                     <span className={`text-right ${isPrintMode ? 'text-black' : ''}`}>{displayReal}</span>
-                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600') : (isPrintMode ? 'text-black' : 'text-red-500')}`}>{valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
+                    {isMonthly && !showPercentage && <span className={`text-right font-medium ${(isNegative ? variacao <= 0 : variacao >= 0) ? (isPrintMode ? 'text-black' : 'text-green-600 dark:text-green-400') : (isPrintMode ? 'text-black' : 'text-red-500 dark:text-red-400')}`}>{valMeta !== 0 ? `${variacao > 0 ? '+' : ''}${safeCurrency(variacao)}` : '-'}</span>}
                 </div>
             );
         });
@@ -490,6 +514,165 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
     );
 };
 
+const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, companyType }) => {
+    const [localBudget, setLocalBudget] = useState({});
+    const [localSubBudget, setLocalSubBudget] = useState({});
+    
+    // SAFEGUARD
+    const cats = companyType === 'personal' ? categoriesPersonal : categoriesBusiness;
+    if (!cats) return null;
+
+    useEffect(() => {
+        setLocalBudget(budget || {});
+        setLocalSubBudget(budget?.subcategories || {});
+    }, [budget]);
+
+    if (!isMonthly) return <div className="p-8 text-center text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700">Selecione um mês específico para planejar o orçamento.</div>;
+
+    const handleMainChange = (type, value) => {
+        setLocalBudget(prev => ({ ...prev, [type]: parseFloat(value) || 0 }));
+    };
+
+    const handleSubChange = (type, subName, value) => {
+        const key = `${type}:${subName}`; const numVal = parseFloat(value) || 0;
+        setLocalSubBudget(prev => {
+            const newSubs = { ...prev, [key]: numVal };
+            const currentTypeSubs = Object.entries(newSubs).filter(([k]) => k.startsWith(type + ':')).reduce((sum, [, val]) => sum + val, 0);
+            setLocalBudget(prevMain => ({ ...prevMain, [type]: currentTypeSubs }));
+            return newSubs;
+        });
+    };
+
+    const handleSave = () => {
+        onSaveBudget({ ...localBudget, subcategories: localSubBudget });
+    };
+
+    return (
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 print:border-none print:shadow-none">
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><LucideTarget className="text-indigo-600 dark:text-indigo-400" /> Planejamento Orçamentário</h2>
+            <div className="space-y-8">
+                {cats.map(cat => (
+                    <div key={cat.value} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-100 dark:border-slate-700 break-inside-avoid">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className={`font-bold text-sm uppercase ${cat.color.split(' ')[0]} print:text-black`}>{cat.label}</h3>
+                            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-40 print:border-gray-400">
+                                <span className="pl-3 text-slate-400 text-sm">R$</span>
+                                <input type="number" value={localBudget[cat.value] || ''} onChange={e => handleMainChange(cat.value, e.target.value)}
+                                    className="w-full p-2 text-right outline-none font-semibold text-slate-700 dark:text-slate-200 bg-transparent print:text-black" placeholder="0,00" />
+                            </div>
+                        </div>
+                        {subcategories[cat.value]?.length > 0 && (
+                            <div className="pl-4 space-y-2 border-l-2 border-slate-200 dark:border-slate-700 ml-2">
+                                {subcategories[cat.value].map(sub => (
+                                    <div key={sub.id} className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-600 dark:text-slate-400 print:text-black">{sub.name}</span>
+                                        <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden w-32 h-8 print:border-gray-400">
+                                            <span className="pl-2 text-slate-400 text-xs">R$</span>
+                                            <input type="number" value={localSubBudget[`${cat.value}:${sub.name}`] || ''} 
+                                                onChange={e => handleSubChange(cat.value, sub.name, e.target.value)}
+                                                className="w-full p-1 text-right outline-none text-sm text-slate-600 dark:text-slate-300 bg-transparent print:text-black" placeholder="0,00" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+            <button onClick={handleSave} className="w-full mt-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors print:hidden">
+                SALVAR METAS
+            </button>
+        </div>
+    );
+};
+
+const CashFlowView = ({ transactions, isPrintMode, companyType }) => {
+    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
+    if (isPrintMode) {
+        return (
+            <div className="grid grid-cols-3 gap-4 border border-gray-300 p-4 text-center">
+                <div><h3 className="text-xs font-bold uppercase mb-1">Entradas</h3><p className="text-xl font-bold">{safeCurrency(receita)}</p></div>
+                <div><h3 className="text-xs font-bold uppercase mb-1">Saídas</h3><p className="text-xl font-bold">{safeCurrency(totalSaidas)}</p></div>
+                <div><h3 className="text-xs font-bold uppercase mb-1">Saldo</h3><p className="text-xl font-bold">{safeCurrency(fluxoCaixa)}</p></div>
+            </div>
+        );
+    }
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl border border-green-100 dark:border-green-900/30 print:bg-white print:border-gray-300"><h3 className="text-green-800 dark:text-green-400 text-sm font-semibold uppercase mb-2 print:text-black">Entradas</h3><p className="text-3xl font-bold text-green-700 dark:text-green-400 print:text-black">{safeCurrency(receita)}</p></div>
+            <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl border border-red-100 dark:border-red-900/30 print:bg-white print:border-gray-300"><h3 className="text-red-800 dark:text-red-400 text-sm font-semibold uppercase mb-2 print:text-black">Saídas</h3><p className="text-3xl font-bold text-red-700 dark:text-red-400 print:text-black">{safeCurrency(totalSaidas)}</p></div>
+            <div className={`p-6 rounded-xl border ${fluxoCaixa >= 0 ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-900/30' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30'} print:bg-white print:border-gray-300`}><h3 className={`${fluxoCaixa >= 0 ? 'text-indigo-800 dark:text-indigo-300' : 'text-orange-800 dark:text-orange-300'} text-sm font-semibold uppercase mb-2 print:text-black`}>Saldo do Período</h3><p className={`text-3xl font-black ${fluxoCaixa >= 0 ? 'text-indigo-900 dark:text-indigo-200' : 'text-orange-700 dark:text-orange-300'} print:text-black`}>{safeCurrency(fluxoCaixa)}</p></div>
+        </div>
+    );
+};
+
+const ChartsView = ({ allTransactions, companyType }) => {
+    const lineData = useMemo(() => {
+        if (!allTransactions || allTransactions.length === 0) return [];
+        const groups = {};
+        allTransactions.forEach(t => {
+            if (!t.createdAt || typeof t.createdAt.toDate !== 'function') return;
+            const d = t.createdAt.toDate();
+            const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(t);
+        });
+        return Object.keys(groups).map(key => {
+            const [yearStr, monthStr] = key.split('-');
+            const fins = calculateFinancials(groups[key], companyType);
+            return { name: `${MONTHS[parseInt(monthStr)]}/${yearStr.slice(2)}`, Lucro: fins.fluxoCaixa, Receita: fins.receita, year: parseInt(yearStr), month: parseInt(monthStr) };
+        }).sort((a, b) => a.year - b.year || a.month - b.month).slice(-12);
+    }, [allTransactions, companyType]);
+
+    if (lineData.length === 0) return <div className="p-8 text-center text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-800/50 rounded-xl">Sem dados suficientes para o gráfico.</div>;
+    return (
+        <div className="h-80 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 print:border-gray-300">
+            <ResponsiveContainer width="100%" height="100%"><LineChart data={lineData}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} /><YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v/1000}k`} /><Tooltip formatter={(value) => safeCurrency(value)} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} /><Legend /><Line type="monotone" dataKey="Receita" stroke="#10b981" strokeWidth={2} dot={false} name="Receita Total" /><Line type="monotone" dataKey="Lucro" stroke="#4f46e5" strokeWidth={3} name="Lucro Líquido" /></LineChart></ResponsiveContainer>
+        </div>
+    );
+};
+
+const CategoryPieChart = ({ transactions, type }) => {
+    const data = useMemo(() => {
+        const filtered = transactions.filter(t => t.type === type);
+        const groups = {};
+        filtered.forEach(t => {
+            const cat = t.subcategory || 'Outros';
+            groups[cat] = (groups[cat] || 0) + Number(t.amount);
+        });
+        return Object.entries(groups).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+    }, [transactions, type]);
+
+    if (data.length === 0) return <div className="h-64 flex items-center justify-center text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-800/50 rounded-xl">Sem dados de {type}.</div>;
+
+    return (
+        <div className="h-96 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 flex flex-col print:border-gray-300 print:break-inside-avoid">
+            <h3 className="text-sm font-bold text-gray-700 dark:text-slate-200 mb-4 text-center print:text-black">{type} por Subcategoria</h3>
+            <div className="flex-1 flex justify-center items-center relative">
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie 
+                            data={data} 
+                            cx="50%" 
+                            cy="50%" 
+                            innerRadius={50} 
+                            outerRadius={70} 
+                            paddingAngle={3} 
+                            dataKey="value" 
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                            labelLine={true}
+                        >
+                            {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip formatter={(value) => safeCurrency(value)} />
+                        <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+};
+
 export default function App() {
     const [user, setUser] = useState(null);
     const [db, setDb] = useState(null);
@@ -523,6 +706,7 @@ export default function App() {
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [repeatingTransaction, setRepeatingTransaction] = useState(null);
     const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
+    // Uso seguro da variável global
     const [formType, setFormType] = useState(transactionCategories[0].value);
     const [formSubcat, setFormSubcat] = useState('');
     const [formDesc, setFormDesc] = useState('');
@@ -534,19 +718,32 @@ export default function App() {
     const companyType = currentCompany?.type || 'business';
     const activeCategories = useMemo(() => companyType === 'personal' ? categoriesPersonal : categoriesBusiness, [companyType]);
 
-    // Initial Load
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) { setDarkMode(true); }
-        if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey.startsWith('AIza')) { console.error("FIREBASE ERROR"); return; }
+        if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey.startsWith('AIza')) { console.error("FIREBASE CONFIG NÃO ENCONTRADA OU INVÁLIDA"); return; }
         const app = initializeApp(firebaseConfig);
-        const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
+        const _auth = getAuth(app);
+        const _db = getFirestore(app);
+        setDb(_db);
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
     }, []);
 
-    useEffect(() => { if (darkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); } }, [darkMode]);
+    useEffect(() => {
+        if (darkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
+    }, [darkMode]);
+    
+    useEffect(() => {
+        if (notificationsEnabled) {
+            const lastAccess = localStorage.getItem('lastAccess');
+            const now = Date.now();
+            if (!lastAccess || now - lastAccess > 86400000) {
+                 new Notification("Gestão Financeira", { body: "Não se esqueça de lançar suas despesas hoje!", icon: "https://placehold.co/192x192/4f46e5/ffffff.png?text=$" });
+                 localStorage.setItem('lastAccess', now);
+            }
+        }
+    }, [notificationsEnabled]);
 
-    // Data Loading
     useEffect(() => {
         if (!user || !db) return;
         const q = query(collection(db, `artifacts/${appId}/users/${user.uid}/companies`), orderBy('createdAt', 'asc'));
@@ -562,7 +759,12 @@ export default function App() {
             }
             setLoading(false);
         });
-    }, [user, db]);
+    }, [user, db]); 
+
+    const handleCompanyChange = (company) => {
+        setCurrentCompany(company);
+        localStorage.setItem('lastCompanyId', company.id);
+    };
 
     useEffect(() => {
         if (!user || !db || !currentCompany) { setTransactions([]); setSubcategories({}); setAssets([]); return; }
@@ -583,11 +785,11 @@ export default function App() {
         getDoc(doc(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/budgets/${year}_${period}`)).then(snap => setBudget(snap.exists() ? snap.data() : {})).catch(err => console.error(err));
     }, [user, db, period, year, currentCompany]);
 
-    // Helpers
     const filteredData = useMemo(() => {
         return transactions.filter(t => {
-            if (!t.createdAt) return false;
+            if (!t.createdAt || typeof t.createdAt.toDate !== 'function') return false;
             const d = t.createdAt.toDate();
+            // Lógica "Todo o Período"
             if (period === 'ALL') return true; 
 
             if (d.getUTCFullYear() !== year) return false;
@@ -613,8 +815,8 @@ export default function App() {
         return filteredData.filter(t => t.desc.toLowerCase().includes(lowerTerm) || (t.subcategory && t.subcategory.toLowerCase().includes(lowerTerm)));
     }, [filteredData, searchTerm]);
 
-    const handleCompanyChange = (c) => { setCurrentCompany(c); localStorage.setItem('lastCompanyId', c.id); };
     const resetForm = () => { setEditingTransaction(null); setFormDate(new Date().toISOString().split('T')[0]); setFormType(activeCategories[0].value); setFormSubcat(''); setFormDesc(''); setFormAmount(''); setIsRecurring(false); setRecurringMonths(1); };
+    const handleEditClick = (t) => { setEditingTransaction(t); setFormDesc(t.desc); setFormAmount(t.amount.toString().replace('.', ',')); setFormType(t.type); setFormSubcat(t.subcategory || ''); if (t.createdAt) setFormDate(t.createdAt.toDate().toISOString().split('T')[0]); };
     
     // --- FUNÇÕES DE CRUD DO APP ---
     // Definição da função para adicionar recorrentes
@@ -856,18 +1058,4 @@ export default function App() {
                 {mainTab === 'patrimonio' && <AssetsView assets={assets} onAddAsset={handleAddAsset} onDeleteAsset={handleDeleteAsset} />}
                 
                 {mainTab === 'resultados' && (
-                    <div className="space-y-8">
-                         <div className="flex gap-2 overflow-x-auto pb-2">
-                            {['dre', 'fluxo', 'graficos', 'subcategorias'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-3 py-1 rounded-full text-sm font-bold ${resultTab === k ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{k.toUpperCase()}</button>))}
-                         </div>
-                         {resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} isPrintMode={false} />}
-                         {resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} isPrintMode={false} />}
-                         {resultTab === 'graficos' && <ChartsView allTransactions={transactions} companyType={companyType} />}
-                         {resultTab === 'subcategorias' && <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL} /></div>}
-                    </div>
-                )}
-            </main>
-            <button onClick={() => setShowChat(!showChat)} className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-xl hover:scale-105 transition-transform"><LucideMessageSquare size={24} /></button>
-        </div>
-    );
-}
+                    <div className="
