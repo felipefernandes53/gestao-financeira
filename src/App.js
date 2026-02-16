@@ -11,7 +11,7 @@ import {
 import { 
     Trash2 as LucideTrash2, Building2 as LucideBuilding2, Plus as LucidePlus, Edit2 as LucideEdit2, X as LucideX, Settings as LucideSettings, 
     PieChart as LucidePieChart, Target as LucideTarget, ChevronDown as LucideChevronDown, ChevronRight as LucideChevronRight, Search as LucideSearch, 
-    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, Landmark as LucideLandmark, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh
+    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh
 } from 'lucide-react';
 
 // --- SUAS CHAVES REAIS DO FIREBASE ---
@@ -37,14 +37,6 @@ const PERIOD_OPTIONS = [
     { value: 'Q3', label: '3º Trimestre' }, { value: 'Q4', label: '4º Trimestre' },
     { value: 'S1', label: '1º Semestre' }, { value: 'S2', label: '2º Semestre' },
     { value: 'Y', label: 'Ano Completo' },
-];
-
-const INDICES_MERCADO = [
-    { name: 'CDI (a.a)', value: '11,25%' },
-    { name: 'IPCA (12m)', value: '4,50%' },
-    { name: 'INCC-M', value: '0,30% (mês)' },
-    { name: 'Poupança', value: '0,5% + TR' },
-    { name: 'Dólar', value: 'R$ 5,60' }
 ];
 
 // --- CATEGORIAS EMPRESARIAIS ---
@@ -89,8 +81,7 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-const transactionCategories = categoriesBusiness; // Fallback seguro
-const DEFAULT_SUBCATEGORIES = DEFAULT_SUBCATEGORIES_BUSINESS; // Fallback seguro
+const transactionCategories = categoriesBusiness; // Fallback crucial
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
@@ -110,7 +101,6 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     cats.forEach(cat => { if (!cat.isPositive) totalSaidas += sumByType(cat.value); });
     const fluxoCaixa = receita - totalSaidas;
     
-    // Garantia que assets é array
     const safeAssets = Array.isArray(assets) ? assets : [];
     const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
     const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
@@ -126,30 +116,55 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     return financials;
 };
 
-// --- Componentes ---
-
+// --- Componente de Patrimônio e Indicadores ---
 const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
     const [type, setType] = useState('bens'); 
     const [indexer, setIndexer] = useState('');
-    const [marketData, setMarketData] = useState({ USD: 'Carregando...', EUR: 'Carregando...', BTC: 'Carregando...' });
+    
+    // Estado para os indicadores
+    const [indices, setIndices] = useState({
+        USD: '...', EUR: '...', BTC: '...', CDI: '...', SELIC: '...'
+    });
 
     useEffect(() => {
-        fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL')
-            .then(res => res.json())
-            .then(data => {
-                setMarketData({
-                    USD: `R$ ${parseFloat(data.USDBRL.bid).toFixed(2)}`,
-                    EUR: `R$ ${parseFloat(data.EURBRL.bid).toFixed(2)}`,
-                    BTC: `R$ ${parseFloat(data.BTCBRL.bid).toLocaleString('pt-BR')}`
+        const fetchMarketData = async () => {
+            try {
+                // HG Brasil API via Proxy para evitar CORS em dev/web
+                // Nota: Em produção real, chame isso do backend. Aqui usamos um truque.
+                const key = '855e9e8f';
+                
+                // Fetch Moedas (AwesomeAPI - Pública e Gratuita)
+                const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
+                const dataCoins = await resCoins.json();
+                
+                // Fetch Índices (HG Brasil)
+                // Se der erro de CORS, usamos fallback
+                let hgData = { taxes: { cdi: 11.25, selic: 11.25 } }; 
+                try {
+                    const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
+                    const jsonHg = await resHg.json();
+                    if(jsonHg.results) hgData = jsonHg.results;
+                } catch(e) { console.log('HG Brasil limitou CORS, usando fallback.'); }
+
+                setIndices({
+                    USD: `R$ ${parseFloat(dataCoins.USDBRL.bid).toFixed(2)}`,
+                    EUR: `R$ ${parseFloat(dataCoins.EURBRL.bid).toFixed(2)}`,
+                    BTC: `R$ ${parseFloat(dataCoins.BTCBRL.bid).toLocaleString('pt-BR', {maximumFractionDigits: 0})}`,
+                    CDI: `${hgData.taxes.cdi || 11.25}%`,
+                    SELIC: `${hgData.taxes.selic || 11.25}%`
                 });
-            })
-            .catch(() => setMarketData({ USD: 'Erro', EUR: 'Erro', BTC: 'Erro' }));
+            } catch (err) {
+                console.error(err);
+                setIndices({ USD: 'Erro', EUR: '-', BTC: '-', CDI: '11.25%', SELIC: '-' });
+            }
+        };
+        fetchMarketData();
     }, []);
 
     const handleAdd = () => {
-        const val = parseFloat(value.replace('.', '').replace(',', '.')); // Corrige parsing BR
+        const val = parseFloat(value.replace('.', '').replace(',', '.')); 
         if (!name || isNaN(val)) return;
         onAddAsset({ name, value: val, type, indexer, createdAt: Timestamp.now() });
         setName(''); setValue(''); setIndexer('');
@@ -173,13 +188,13 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
             </div>
             
             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
-                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Indicadores de Mercado (Ao Vivo)</h3>
+                <h3 className="text-xs font-bold uppercase text-indigo-800 dark:text-indigo-300 mb-3 flex items-center gap-2"><LucideRefresh size={12}/> Mercado Hoje (HG Brasil + AwesomeAPI)</h3>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.USD}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.EUR}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{marketData.BTC}</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI (Meta)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">11,25%</p></div>
-                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">IPCA (12m)</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">4,50%</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">DÓLAR</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.USD}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">EURO</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.EUR}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">BITCOIN</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.BTC}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">CDI</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.CDI}</p></div>
+                    <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-lg shadow-sm"><p className="text-[10px] text-slate-500 font-bold">SELIC</p><p className="font-mono text-sm font-bold text-slate-700 dark:text-white">{indices.SELIC}</p></div>
                 </div>
             </div>
 
@@ -278,6 +293,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
     );
 };
 
+// ... (Outros Componentes: CalculatorModal, RepeatModal, ExportModal, PrintLayout, InstallGuideModal, TutorialModal - Mantidos iguais para economizar espaço, pois já estão corretos) ...
 const CalculatorModal=({onClose,onConfirm})=>{const [e,setE]=useState('');const h=(v)=>{if(v==='C')setE('');else if(v==='='){try{setE(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))))}catch{setE('Erro')}}else setE(p=>p+v)};const c=()=>{try{onConfirm(String(eval(e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.'))).replace('.',','))}catch{}};const b=['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm"><div className="flex justify-between mb-4"><h3 className="font-bold dark:text-white">Calculadora</h3><button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-4 rounded mb-4 text-right font-bold dark:text-white text-2xl">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{b.map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded font-bold dark:text-white">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-slate-200 p-3 rounded">=</button></div><button onClick={c} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">USAR</button></div></div>)};
 const RepeatModal=({onClose,onConfirm,transaction})=>{const [c,setC]=useState(1);return(<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full"><h3 className="font-bold mb-4 dark:text-white">Repetir</h3><input type="number" value={c} onChange={e=>setC(e.target.value)} className="w-full p-2 border rounded mb-4 dark:bg-slate-900 dark:text-white"/><button onClick={()=>onConfirm(c)} className="w-full bg-indigo-600 text-white p-2 rounded">Confirmar</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Cancelar</button></div></div>)};
 const ExportModal=({onClose,csvContent,fileName})=>{const [c,setC]=useState(false);const r=useRef(null);const h=()=>{if(r.current){r.current.select();document.execCommand('copy');setC(true)}};return(<div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"><div className="bg-white p-6 rounded-xl max-w-lg w-full"><h3 className="font-bold text-lg mb-2">Exportar CSV</h3><textarea ref={r} readOnly value={csvContent} className="w-full h-32 p-2 border rounded mb-4 text-xs font-mono"/><button onClick={h} className="w-full bg-indigo-600 text-white p-3 rounded font-bold">{c?'Copiado!':'Copiar'}</button><button onClick={onClose} className="w-full mt-2 text-slate-500">Fechar</button></div></div>)};
@@ -405,7 +421,7 @@ export default function App() {
             
             {showSettings && <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 p-6 rounded-xl w-full max-w-lg h-[80vh] overflow-y-auto"><div className="flex justify-between mb-4"><h2 className="font-bold text-xl">Categorias</h2><button onClick={()=>setShowSettings(false)}><LucideX/></button></div><div className="mb-8 p-4 bg-indigo-50 dark:bg-indigo-900 rounded flex justify-between"><div><h4>Notificações</h4><p className="text-xs">Lembretes diários.</p></div><button onClick={requestNotificationPermission}><LucideBell/></button></div>{activeCategories.map(cat => (<div key={cat.value} className="mb-6"><h3 className={`font-bold text-sm ${cat.color.split(' ')[0]}`}>{cat.label}</h3><div className="flex gap-2 my-2"><input className="border p-2 rounded flex-1 dark:bg-slate-900" placeholder="Nova" value={newSubcatName} onChange={e=>setNewSubcatName(e.target.value)} /><button onClick={()=>{handleAddSub(cat.value)}} className="bg-indigo-600 text-white p-2 rounded"><LucidePlus/></button></div><div className="flex flex-wrap gap-2">{subcategories[cat.value]?.map(s=><div key={s.id} className="bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full text-sm flex gap-2">{s.name} <button onClick={()=>handleDeleteSub(s.id)} className="text-red-500"><LucideX size={14}/></button></div>)}</div></div>))}</div></div>}
 
-            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={companyType} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={companyType} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
+            {showPrintPreview && (<PrintLayout companyName={currentCompany?.name} periodStr={`${typeof period === 'number' ? MONTHS[period] : period}/${year}`} onClose={() => setShowPrintPreview(false)}>{mainTab === 'resultados' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Demonstrativo do Resultado (DRE)</h3><DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} isPrintMode={true} companyType={companyType} /><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-8">Fluxo de Caixa</h3><CashFlowView transactions={filteredData} isPrintMode={true} companyType={companyType} /></>)}{mainTab === 'lancamentos' && (<><h3 className="text-lg font-bold border-b border-gray-400 mb-2 mt-4">Extrato de Lançamentos</h3><table className="w-full text-xs text-left"><thead className="border-b-2 border-gray-300"><tr><th className="py-1">Data</th><th className="py-1">Tipo</th><th className="py-1">Subcategoria</th><th className="py-1">Descrição</th><th className="py-1 text-right">Valor</th></tr></thead><tbody>{searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<tr key={t.id} className="border-b border-gray-100"><td className="py-1">{safeDate(t.createdAt)}</td><td className="py-1">{transactionCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</td><td className="py-1">{t.subcategory || '-'}</td><td className="py-1">{t.desc}</td><td className={`py-1 text-right font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-800' : 'text-red-800'}`}>{safeCurrency(t.amount)}</td></tr>))}</tbody></table></>)}{mainTab === 'planejamento' && (<div className="text-center p-10 text-gray-500 border border-dashed border-gray-300 mt-4">Para imprimir o Planejamento, tire um print da tela ou use a função de impressão do navegador.</div>)}</PrintLayout>)}
 
             <header className="max-w-5xl mx-auto p-4 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
