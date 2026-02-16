@@ -81,8 +81,7 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// *** VARIÁVEL DE SEGURANÇA (O Anti-Crash) ***
-const transactionCategories = categoriesBusiness; 
+const transactionCategories = categoriesBusiness; // Fallback crucial
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
@@ -102,7 +101,7 @@ const calculateFinancials = (data = [], type = 'business', assets = []) => {
     cats.forEach(cat => { if (!cat.isPositive) totalSaidas += sumByType(cat.value); });
     const fluxoCaixa = receita - totalSaidas;
     
-    // Cálculo Patrimonial Seguro
+    // Garantia que assets é array
     const safeAssets = Array.isArray(assets) ? assets : [];
     const totalBens = safeAssets.filter(a => a.type === 'bens').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
     const totalInvest = safeAssets.filter(a => a.type === 'investimento').reduce((acc, c) => acc + (parseFloat(c.value) || 0), 0);
@@ -129,16 +128,16 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
     useEffect(() => {
         const fetchMarketData = async () => {
             try {
-                // Fetch Moedas (AwesomeAPI)
+                const key = '855e9e8f'; // Sua Chave HG Brasil
+                
+                // 1. Fetch Moedas (AwesomeAPI - Pública)
                 const resCoins = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL');
                 const dataCoins = await resCoins.json();
                 
-                // Fetch Índices (HG Brasil)
-                // Usando a chave do usuário: 855e9e8f
-                // Nota: CORS pode bloquear se não estiver no localhost. Adicionando fallback.
+                // 2. Fetch Índices (HG Brasil) - Tentativa direta
                 let hgData = { cdi: 11.25, selic: 11.25 }; 
                 try {
-                    const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=855e9e8f&format=json-cors`);
+                    const resHg = await fetch(`https://api.hgbrasil.com/finance/taxes?key=${key}&format=json-cors`);
                     const jsonHg = await resHg.json();
                     if(jsonHg.results && jsonHg.results[0]) hgData = jsonHg.results[0];
                 } catch(e) { console.warn('HG Brasil CORS/Limit:', e); }
