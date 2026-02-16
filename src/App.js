@@ -13,7 +13,7 @@ import {
     Target as LucideTarget, Search as LucideSearch, Home as LucideHome, RefreshCw as LucideRefresh, AlertCircle as LucideAlertCircle, 
     UserCircle as LucideUserCircle, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Calculator as LucideCalculator, 
     Menu as LucideMenu, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Briefcase as LucideBriefcase, User as LucideUser,
-    ArrowUpRight as LucideArrowUpRight
+    ArrowUpRight as LucideArrowUpRight, Wallet as LucideWallet, Calendar as LucideCalendar
 } from 'lucide-react';
 
 // ============================================================================
@@ -247,31 +247,49 @@ const AssetsView = ({ assets, onAddAsset, onUpdateAsset, onDeleteAsset }) => {
                 </div>
             </div>
 
-            {/* Mobile View: Cards */}
-            <div className="md:hidden space-y-3">
+            {/* Mobile View: Cards Refinados */}
+            <div className="md:hidden space-y-4">
                 {assets.map(a => {
                     const corrected = getCorrectedValue(a);
                     return (
-                    <div key={a.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
-                        <div className={`absolute top-0 left-0 w-1 h-full ${a.type === 'bens' ? 'bg-amber-400' : 'bg-green-500'}`}></div>
-                        <div className="flex justify-between items-start mb-2 pl-3">
+                    <div key={a.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-lg relative overflow-hidden">
+                        <div className={`absolute top-0 left-0 w-2 h-full ${a.type === 'bens' ? 'bg-amber-400' : 'bg-green-500'}`}></div>
+                        
+                        {/* Header do Card */}
+                        <div className="flex justify-between items-start mb-4 pl-3">
+                            <div className="flex-1">
+                                <h4 className="font-black text-slate-800 dark:text-white text-lg leading-tight mb-1">{a.name}</h4>
+                                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${a.type === 'bens' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                    {a.type.toUpperCase()}
+                                </span>
+                            </div>
+                            {a.indexer && <div className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs font-mono font-bold">{a.indexer}</div>}
+                        </div>
+
+                        {/* Dados em Grid */}
+                        <div className="pl-3 grid grid-cols-2 gap-4 mb-4">
                             <div>
-                                <h4 className="font-bold text-slate-800 dark:text-white text-lg leading-tight">{a.name}</h4>
-                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{a.type} {a.indexer ? `• ${a.indexer}` : ''}</span>
+                                <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Valor Inicial</p>
+                                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{safeCurrency(a.value)}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-sm text-slate-400 line-through decoration-slate-300 decoration-2">{safeCurrency(a.value)}</p>
-                                <p className="text-xl font-black text-indigo-600 flex items-center justify-end gap-1">
-                                    {a.indexer ? <LucideArrowUpRight size={16}/> : null}
+                                <p className="text-[10px] uppercase font-bold text-indigo-500 mb-0.5">Valor Atual</p>
+                                <p className="text-lg font-black text-indigo-600 dark:text-indigo-400 flex items-center justify-end gap-1">
+                                    {a.indexer ? <LucideArrowUpRight size={14}/> : null}
                                     {safeCurrency(corrected)}
                                 </p>
                             </div>
                         </div>
-                        <div className="flex justify-between items-center pl-3 pt-2 border-t dark:border-slate-700 mt-2">
-                            <div className="text-xs text-green-600 font-mono font-bold bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded">+{safeCurrency(getDailyReturn(a.value, a.indexer))}/dia</div>
-                            <div className="flex gap-3">
-                                <button onClick={() => handleEdit(a)} className="text-indigo-500 font-bold text-sm p-2">EDITAR</button>
-                                <button onClick={() => onDeleteAsset(a.id)} className="text-red-500 font-bold text-sm p-2">EXCLUIR</button>
+
+                        {/* Footer com Rendimento e Ações */}
+                        <div className="pl-3 pt-3 border-t dark:border-slate-700 flex justify-between items-center">
+                            <div>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Rendimento</p>
+                                <p className="text-xs text-green-600 font-mono font-bold">+{safeCurrency(getDailyReturn(a.value, a.indexer))}/dia</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => handleEdit(a)} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-lg active:scale-90 transition-transform"><LucideEdit2 size={18}/></button>
+                                <button onClick={() => onDeleteAsset(a.id)} className="p-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg active:scale-90 transition-transform"><LucideTrash2 size={18}/></button>
                             </div>
                         </div>
                     </div>
@@ -567,9 +585,9 @@ export default function App() {
         const app = initializeApp(firebaseConfig);
         const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
         
-        const updateViews = parseInt(localStorage.getItem('upd_v49_final') || '0');
-        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v49_final', (updateViews + 1).toString()); }
-        if (!localStorage.getItem('hasSeenFinTutorial_v49')) setShowTutorial(true);
+        const updateViews = parseInt(localStorage.getItem('upd_v50_final') || '0');
+        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v50_final', (updateViews + 1).toString()); }
+        if (!localStorage.getItem('hasSeenFinTutorial_v50')) setShowTutorial(true);
 
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
     }, []);
@@ -625,9 +643,35 @@ export default function App() {
             if (typeof period === 'number') return txMonth === period;
             if (period === 'Q1') return txMonth < 3; if (period === 'Q2') return txMonth >= 3 && txMonth < 6;
             if (period === 'Q3') return txMonth >= 6 && txMonth < 9; if (period === 'Q4') return txMonth >= 9;
+            if (period === 'S1') return txMonth < 6; if (period === 'S2') return txMonth >= 6;
             return true;
         });
     }, [transactions, period, year]);
+
+    const accumulatedBalance = useMemo(() => {
+        if (!transactions.length) return 0;
+        let cutoffDate = new Date(8640000000000000); // Default ALL
+        
+        if (period !== 'ALL') {
+            let endMonth = 11;
+            if (typeof period === 'number') endMonth = period;
+            else if (period === 'Q1') endMonth = 2;
+            else if (period === 'Q2') endMonth = 5;
+            else if (period === 'Q3') endMonth = 8;
+            else if (period === 'Q4') endMonth = 11;
+            else if (period === 'S1') endMonth = 5;
+            else if (period === 'S2') endMonth = 11;
+            
+            cutoffDate = new Date(year, endMonth + 1, 0, 23, 59, 59);
+        }
+
+        const txsUpToCutoff = transactions.filter(t => {
+            if (!t.createdAt) return false;
+            return t.createdAt.toDate() <= cutoffDate;
+        });
+
+        return calculateFinancials(txsUpToCutoff, companyType).fluxoCaixa;
+    }, [transactions, period, year, companyType]);
 
     const searchedData = useMemo(() => {
         if (!searchTerm.trim()) return filteredData;
@@ -847,7 +891,7 @@ export default function App() {
                 
                 {mainTab === 'resultados' && (
                     <div className="space-y-8 animate-fade-in">
-                         <CashFlowView transactions={filteredData} companyType={companyType} />
+                         <CashFlowView transactions={filteredData} accumulatedBalance={accumulatedBalance} companyType={companyType} />
                          <div className="flex gap-2 bg-slate-200 dark:bg-slate-900 p-1.5 rounded-2xl w-fit mx-auto md:mx-0">
                             {['dre', 'graficos'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-6 py-2 rounded-xl text-xs font-black uppercase transition-all ${resultTab === k ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-md' : 'text-slate-500'}`}>{k}</button>))}
                          </div>
@@ -900,9 +944,9 @@ export default function App() {
                 </div>
             )}
 
-            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-4 rounded-3xl shadow-2xl z-[80] font-bold text-xs md:text-sm animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer w-max max-w-[90%]" onClick={()=>setShowUpdateMessage(false)}><LucideRocket className="shrink-0"/> <span>NOVIDADE: ASSISTENTE IA!</span> <LucideX size={16} className="shrink-0"/></div>}
+            {showUpdateMessage && <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-6 py-4 rounded-3xl shadow-2xl z-[80] font-bold text-xs md:text-sm animate-bounce flex items-center gap-3 border-4 border-white cursor-pointer w-max max-w-[90%]" onClick={()=>setShowUpdateMessage(false)}><LucideRocket className="shrink-0"/> <span>ASSISTENTE IA, TESTE AGORA!</span> <LucideX size={16} className="shrink-0"/></div>}
             
-            {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v49', 'true')}} />}
+            {showTutorial && <TutorialModal onClose={() => {setShowTutorial(false); localStorage.setItem('hasSeenFinTutorial_v50', 'true')}} />}
             {showCalculator && <CalculatorModal onClose={()=>setShowCalculator(false)} onConfirm={v=>{setFormAmount(v); setShowCalculator(false)}} />}
             
             <button 
@@ -965,7 +1009,7 @@ function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
         { title: "BEM-VINDO!", desc: "Seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "ASSISTENTE IA", desc: "Agora ele entende suas palavras! Digite 'Uber 50' e ele sabe que é uma despesa de Transporte. 'Mercado' vira Alimentação, "salário" é entrada de capital.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
+        { title: "ASSISTENTE IA", desc: "Agora ele entende suas palavras! Digite 'Uber 50' e ele sabe que é uma despesa de Transporte. 'Mercado' vira Alimentação, 'salário' é entrada de capital.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
         { title: "VALOR CORRIGIDO", desc: "No seu Patrimônio, veja quanto seu dinheiro já rendeu automaticamente na nova coluna.", icon: <LucideTrendingUp size={48} className="text-green-500"/> },
         { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registrar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-indigo-500"/> },
         { title: "PATRIMÔNIO", desc: "Registre bens e investimentos. Agora com cálculo de correção monetária.", icon: <LucideHome size={48} className="text-amber-500"/> }
@@ -985,13 +1029,13 @@ function TutorialModal({onClose}){
     </div></div>)
 }
 
-function CashFlowView({ transactions, companyType }){
-    const { receita, totalSaidas, fluxoCaixa } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
+function CashFlowView({ transactions, accumulatedBalance, companyType }){
+    const { receita, totalSaidas } = useMemo(() => calculateFinancials(transactions, companyType), [transactions, companyType]);
     return (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl border border-green-100 dark:border-green-900/30"><h3 className="text-green-800 dark:text-green-400 text-sm font-semibold uppercase mb-2">Entradas</h3><p className="text-3xl font-bold text-green-700 dark:text-green-400">{safeCurrency(receita)}</p></div>
             <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl border border-red-100 dark:border-red-900/30"><h3 className="text-red-800 dark:text-red-400 text-sm font-semibold uppercase mb-2">Saídas</h3><p className="text-3xl font-bold text-red-700 dark:text-red-400">{safeCurrency(totalSaidas)}</p></div>
-            <div className={`p-6 rounded-xl border ${fluxoCaixa >= 0 ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-900/30' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30'}`}><h3 className={`${fluxoCaixa >= 0 ? 'text-indigo-800 dark:text-indigo-300' : 'text-orange-800 dark:text-orange-300'} text-sm font-semibold uppercase mb-2`}>Saldo Atual</h3><p className={`text-3xl font-black ${fluxoCaixa >= 0 ? 'text-indigo-900 dark:text-indigo-200' : 'text-orange-700 dark:text-orange-300'}`}>{safeCurrency(fluxoCaixa)}</p></div>
+            <div className={`p-6 rounded-xl border ${accumulatedBalance >= 0 ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-900/30' : 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30'}`}><h3 className={`${accumulatedBalance >= 0 ? 'text-indigo-800 dark:text-indigo-300' : 'text-orange-800 dark:text-orange-300'} text-sm font-semibold uppercase mb-2`}>Saldo Atual</h3><p className={`text-3xl font-black ${accumulatedBalance >= 0 ? 'text-indigo-900 dark:text-indigo-200' : 'text-orange-700 dark:text-orange-300'}`}>{safeCurrency(accumulatedBalance)}</p></div>
         </div>
     );
 }
