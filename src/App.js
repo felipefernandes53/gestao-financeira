@@ -222,7 +222,7 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
 
 // --- CHAT INTERFACE (INTELIGÊNCIA LORD) ---
 const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransaction, onAddAsset, onUpdateTransaction, onDeleteTransaction, currentCompany, transactions }) => {
-    const [messages, setMessages] = useState([{ id: 1, text: "Olá Lord! Sou seu assistente financeiro de elite. Como posso organizar seu império hoje?", sender: 'bot' }]);
+    const [messages, setMessages] = useState([{ id: 1, text: "Olá! Sou o seu assistente financeiro de elite. Como posso organizar o seu império hoje?", sender: 'bot' }]);
     const [inputText, setInputText] = useState('');
     const [lastActionId, setLastActionId] = useState(null);
     const messagesEndRef = useRef(null);
@@ -242,12 +242,19 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
             let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
             
             // --- CÉREBRO LORD NLP 4.5 ---
-            const moneyRegex = /(?:r\$|reais)?\s*(\d+(?:\.\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)/i;
-            const moneyMatch = text.match(moneyRegex);
-            const amount = moneyMatch ? parseFloat(moneyMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
-
+            // Extração precisa de valores e exclusão de números que indicam meses
             const quantityMatch = text.match(/(\d+)\s*meses/i);
             const months = quantityMatch ? parseInt(quantityMatch[1]) : 1;
+
+            // Remove o número de meses do texto antes de procurar o valor em dinheiro
+            let textToSearchMoney = text;
+            if (quantityMatch) {
+                textToSearchMoney = text.replace(quantityMatch[0], '');
+            }
+
+            const moneyRegex = /(?:r\$|reais)?\s*(\d+(?:\.\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)/i;
+            const moneyMatch = textToSearchMoney.match(moneyRegex);
+            const amount = moneyMatch ? parseFloat(moneyMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
 
             const isAsset = ['investi', 'comprei', 'patrimonio', 'imovel', 'carro', 'cdb', 'fii', 'acoes'].some(w => lowerText.includes(w));
             const isIncome = ['recebi', 'ganhei', 'faturamento', 'venda', 'lucro', 'entrada', 'salario'].some(w => lowerText.includes(w));
@@ -259,16 +266,16 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
                 let idx = lowerText.includes('cdi') ? 'CDI' : lowerText.includes('ipca') ? 'IPCA' : lowerText.includes('incc') ? 'INCC' : '';
                 try {
                     await onAddAsset({ name: name || 'Novo Patrimônio', value: amount, type, indexer: idx, createdAt: Timestamp.now() });
-                    botResponse.text = `🏛️ Lord, registrei o ${type} "${name || 'Patrimônio'}" no valor de ${safeCurrency(amount)} na sua aba de Patrimônio.`;
-                } catch(e) { botResponse.text = "Desculpe Lord, falhei ao gravar esse bem."; }
+                    botResponse.text = `🏛️ Registrei o ${type} "${name || 'Patrimônio'}" no valor de ${safeCurrency(amount)} na sua aba de PATRIMÔNIO. O rendimento estimado já está sendo projetado!`;
+                } catch(e) { botResponse.text = "Desculpe, falhei ao gravar este bem."; }
             }
             else if (isRecurring && amount > 0) {
-                const cleanDesc = text.replace(moneyMatch[0], '').replace(quantityMatch ? quantityMatch[0] : '', '').replace(/(meses|por|durante|reais|fixa|despesa|R\$|todo mes|recorrente)/gi, '').trim();
+                const cleanDesc = text.replace(moneyMatch ? moneyMatch[0] : '', '').replace(quantityMatch ? quantityMatch[0] : '', '').replace(/(meses|por|durante|reais|fixa|despesa|R\$|todo mes|recorrente)/gi, '').trim();
                 const type = isIncome ? (companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA) 
                                       : (companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL);
                 try {
                     await onAddRecurringTransaction({ desc: cleanDesc || 'Recorrente', amount, type, months: months > 1 ? months : 12 });
-                    botResponse.text = `🔄 Lord, agendado! "${cleanDesc || 'Despesa'}" de ${safeCurrency(amount)} mensalmente por ${months > 1 ? months : 12} meses. Já aparecem no seu planejamento futuro!`;
+                    botResponse.text = `🔄 Agendado! "${cleanDesc || 'Despesa'}" de ${safeCurrency(amount)} mensalmente por ${months > 1 ? months : 12} meses. Já aparecem no seu planeamento futuro!`;
                 } catch(e) { botResponse.text = "Erro ao processar as parcelas futuras."; }
             }
             else if (amount > 0) {
@@ -278,11 +285,11 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
                 try {
                     const newId = await onAddTransaction({ desc: cleanDesc || 'Lançamento IA', amount, type, subcategory: '', date: new Date() });
                     setLastActionId(newId);
-                    botResponse.text = `✅ Feito Lord! Lançamento de ${safeCurrency(amount)} em "${cleanDesc || 'Geral'}" concluído.`;
-                } catch(e) { botResponse.text = "Erro ao gravar lançamento."; }
+                    botResponse.text = `✅ Lançamento de ${safeCurrency(amount)} em "${cleanDesc || 'Geral'}" concluído com sucesso.`;
+                } catch(e) { botResponse.text = "Erro técnico ao guardar lançamento."; }
             }
             else {
-                botResponse.text = "Lord, não entendi o comando. Tente algo como: 'Gastei 150 no mercado' ou 'Aluguel 1200 fixa por 12 meses'.";
+                botResponse.text = "Não consegui extrair os dados. Tente algo como: 'Gastei 150 no mercado' ou 'Aluguel 1200 fixa por 12 meses'.";
             }
             setMessages(prev => [...prev, botResponse]);
         }, 500);
@@ -290,7 +297,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
 
     return (
         <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 h-[480px] animate-fade-in-up">
-            <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center shadow-lg"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold tracking-tight">Estratégia Lord IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
+            <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center shadow-lg"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold tracking-tight">Estratégia IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950/50">
                 {messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -299,8 +306,8 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
                 ))}
                 <div ref={messagesEndRef} />
             </div>
-            <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2">
-                <textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none max-h-32" placeholder="Ordene aqui, Lord..." rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
+            <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2 shadow-inner">
+                <textarea className="flex-1 bg-slate-100 dark:bg-slate-800 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white resize-none max-h-32" placeholder="Dê a sua ordem..." rows={1} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
                 <button onClick={handleSend} className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 self-end shadow-md transition-all active:scale-95"><LucideSend size={18} /></button>
             </div>
         </div>
@@ -357,7 +364,7 @@ export default function App() {
         const updateViews = parseInt(localStorage.getItem('lordUpdateViews_v46') || '0');
         if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('lordUpdateViews_v46', (updateViews + 1).toString()); }
         
-        // Tutorial
+        // Tutorial renovado
         if (!localStorage.getItem('hasSeenFinTutorial_v46')) setShowTutorial(true);
 
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
@@ -463,7 +470,7 @@ export default function App() {
         setEditingTransaction(null); setFormDesc(''); setFormAmount(''); setIsRecurring(false);
     };
 
-    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">Preparando Sistema de Lord...</p></div>;
+    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">A preparar o seu império financeiro...</p></div>;
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-500 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
@@ -481,6 +488,7 @@ export default function App() {
             </header>
 
             <main className="max-w-5xl mx-auto p-4">
+                {/* ABAS COM ACENTO E MAIÚSCULAS */}
                 <div className="flex overflow-x-auto gap-4 mb-8 no-print border-b dark:border-slate-800">
                     {['lancamentos', 'planejamento', 'patrimonio', 'resultados'].map(t => (
                         <button key={t} onClick={() => setMainTab(t)} className={`px-6 py-4 font-black transition-all border-b-4 ${mainTab === t ? 'border-indigo-600 text-indigo-600 scale-105' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
@@ -497,7 +505,7 @@ export default function App() {
                                 <form onSubmit={handleSaveTransaction} className="space-y-5">
                                     <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
                                     <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500 dark:text-white">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
-                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Descrição (Ex: Aluguel)" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
+                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="O que deseja registar?" className="w-full p-4 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" />
                                     <div className="relative"><span className="absolute left-4 top-4 font-black text-slate-400">R$</span><input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-4 pl-12 bg-slate-50 dark:bg-slate-900 border-0 rounded-2xl font-black text-2xl outline-none focus:ring-2 ring-indigo-500 dark:text-white" /></div>
                                     {!editingTransaction && (<div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border"><div className="flex items-center gap-3"><input type="checkbox" id="rec" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-6 h-6 rounded-lg text-indigo-600 focus:ring-0" /><label htmlFor="rec" className="font-black text-xs uppercase tracking-widest text-slate-500">Repetir por meses?</label></div>{isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(parseInt(e.target.value))} className="w-16 p-2 rounded-lg bg-white dark:bg-slate-800 text-center font-bold" />}</div>)}
                                     <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all uppercase tracking-widest active:scale-95">GRAVAR NO LIVRO</button>
@@ -507,13 +515,13 @@ export default function App() {
                         <div className="lg:col-span-3">
                             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border dark:border-slate-800 h-[700px] flex flex-col overflow-hidden">
                                 <div className="p-6 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><span className="font-black uppercase text-xs tracking-[0.2em] text-slate-400">Fluxo de Movimentação</span><div className="relative"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Procurar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-white dark:bg-slate-950 rounded-xl text-xs w-48 outline-none border dark:border-slate-700" /></div></div>
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
                                     {searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (
                                         <div key={t.id} className="p-5 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl flex justify-between items-center hover:shadow-lg transition-all group">
                                             <div className="truncate"><p className="font-black truncate text-sm uppercase leading-tight">{t.desc}</p><p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-tighter">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
                                             <div className="flex items-center gap-4">
                                                 <span className={`font-black whitespace-nowrap text-lg ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
-                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => { if(t.recurringId) setDeletingRecurring(t); else if(window.confirm("Apagar?")) handleDeleteSeries(t.id, false); }} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"><LucideTrash2 size={18}/></button></div>
+                                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => { if(t.recurringId) setDeletingRecurring(t); else if(window.confirm("Apagar este lançamento?")) handleDeleteSeries(t.id, false); }} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl"><LucideTrash2 size={18}/></button></div>
                                             </div>
                                         </div>
                                     ))}
@@ -542,8 +550,8 @@ export default function App() {
                 <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
                     <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border dark:border-slate-700">
                         <LucideAlertCircle className="mx-auto text-amber-500 mb-4" size={48} />
-                        <h3 className="text-xl font-black mb-2">Item Recorrente</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Lord, este item faz parte de uma série (recorrência). Deseja apagar apenas esta parcela ou toda a sequência futura?</p>
+                        <h3 className="text-xl font-black mb-2 uppercase tracking-tighter">Item Recorrente</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Este item faz parte de uma série. Deseja apagar apenas esta parcela ou toda a sequência futura?</p>
                         <div className="space-y-3">
                             <button onClick={()=>handleDeleteSeries(deletingRecurring.id, false)} className="w-full py-4 bg-slate-100 dark:bg-slate-700 font-bold rounded-2xl">Apagar APENAS ESTE</button>
                             <button onClick={()=>handleDeleteSeries(deletingRecurring.id, true)} className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg">Apagar TODA A SÉRIE</button>
@@ -568,7 +576,7 @@ export default function App() {
 // COMPONENTES AUXILIARES REORGANIZADOS
 function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onRenameCompany, onOpenSettings }){
     const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false);
-    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Império Lord<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome do Império" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><button onClick={()=>onAddCompany(newName, 'business')} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
+    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Suas Contas<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><button onClick={()=>onAddCompany(newName, 'business')} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
 }
 
 function CalculatorModal({onClose,onConfirm}){
@@ -579,19 +587,19 @@ function CalculatorModal({onClose,onConfirm}){
             try{ const calc = new Function('return ' + e.replace(/x/g,'*').replace(/÷/g,'/').replace(/,/g,'.')); setE(String(calc())); }catch{setE('Erro')}
         }else setE(p=>p+v)
     };
-    return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl"><div className="flex justify-between mb-4 font-black uppercase text-[10px] text-indigo-600 tracking-widest">Lord Calc<button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl mb-4 text-right font-black text-3xl overflow-hidden">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'].map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl font-black text-xl hover:bg-indigo-50">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-indigo-600 text-white p-4 rounded-xl font-black text-xl shadow-lg">=</button></div><button onClick={()=>onConfirm(e.replace('.',','))} className="w-full bg-slate-800 text-white p-4 rounded-xl font-black uppercase tracking-widest">Usar Valor</button></div></div>)
+    return(<div className="fixed inset-0 bg-black/60 z-[99] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl"><div className="flex justify-between mb-4 font-black uppercase text-[10px] text-indigo-600 tracking-widest">Calculadora Inteligente<button onClick={onClose}><LucideX/></button></div><div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl mb-4 text-right font-black text-3xl overflow-hidden">{e||'0'}</div><div className="grid grid-cols-4 gap-2 mb-4">{['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'].map(x=><button key={x} onClick={()=>h(x)} className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl font-black text-xl hover:bg-indigo-50">{x}</button>)}<button onClick={()=>h('=')} className="col-span-4 bg-indigo-600 text-white p-4 rounded-xl font-black text-xl">=</button></div><button onClick={()=>onConfirm(e.replace('.',','))} className="w-full bg-slate-800 text-white p-4 rounded-xl font-black uppercase tracking-widest">Usar Valor</button></div></div>)
 }
 
 function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
-        { title: "BEM-VINDO LORD!", desc: "Seu império financeiro agora tem cérebro próprio. Vamos começar?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registrar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
-        { title: "ASSISTENTE IA", desc: "O botão de chat permite dar ordens por voz ou texto. Diga: 'Internet 100 reais fixa por 12 meses' e a mágica acontece.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
-        { title: "PATRIMÔNIO", desc: "Cadastre bens e investimentos. O sistema projeta o rendimento diário estimado para você baseado em índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
-        { title: "ESTRATÉGIA", desc: "Em RESULTADOS, analise seu DRE e Fluxo de Caixa. Tome decisões baseadas em dados.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
+        { title: "BEM-VINDO!", desc: "O seu império financeiro agora tem cérebro próprio. Vamos começar?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
+        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
+        { title: "ASSISTENTE IA", desc: "O botão de chat permite dar ordens. Diga: 'Internet 100 reais fixa por 12 meses' e o sistema gera os lançamentos futuros automaticamente para o seu planeamento.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
+        { title: "PATRIMÔNIO", desc: "Registe bens e investimentos. O sistema projeta o rendimento diário estimado para você baseado em índices como CDI ou IPCA.", icon: <LucideHome size={48} className="text-amber-500"/> },
+        { title: "ESTRATÉGIA", desc: "Em RESULTADOS, analise seu DRE e Fluxo de Caixa. Use a opção 'Todo o Período' para ver o histórico completo da conta.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
     ];
-    return (<div className="fixed inset-0 bg-indigo-600 z-[200] flex items-center justify-center p-6 text-white text-center"><div className="max-w-sm space-y-8 animate-fade-in"><div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl animate-bounce">{slides[step].icon}</div><h2 className="text-3xl font-black italic tracking-tighter uppercase">{slides[step].title}</h2><p className="text-lg font-medium opacity-90">{slides[step].desc}</p><div className="flex gap-2 justify-center">{slides.map((_,i)=><div key={i} className={`h-2 w-2 rounded-full ${i===step?'bg-white w-8':'bg-indigo-400'} transition-all`}/>)}</div><button onClick={()=>step<slides.length-1?setStep(step+1):onClose()} className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all">{step<slides.length-1?'PRÓXIMO':'ESTOU PRONTO!'}</button></div></div>)
+    return (<div className="fixed inset-0 bg-indigo-600 z-[200] flex items-center justify-center p-6 text-white text-center animate-fade-in"><div className="max-w-sm space-y-8"><div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl animate-bounce">{slides[step].icon}</div><h2 className="text-3xl font-black italic tracking-tighter uppercase">{slides[step].title}</h2><p className="text-lg font-medium opacity-90">{slides[step].desc}</p><div className="flex gap-2 justify-center">{slides.map((_,i)=><div key={i} className={`h-2 w-2 rounded-full ${i===step?'bg-white w-8':'bg-indigo-400'} transition-all`}/>)}</div><button onClick={()=>step<slides.length-1?setStep(step+1):onClose()} className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all">{step<slides.length-1?'PRÓXIMO':'ESTOU PRONTO!'}</button></div></div>)
 }
 
 function DREView({ transactions, companyType }){
@@ -608,7 +616,7 @@ function DREView({ transactions, companyType }){
                     </div>
                 ))}
                 <div className="flex justify-between p-6 items-center bg-indigo-50 dark:bg-indigo-900/20">
-                    <span className="font-black text-indigo-900 dark:text-indigo-200 text-lg uppercase italic tracking-tighter">Saldo Lord</span>
+                    <span className="font-black text-indigo-900 dark:text-indigo-200 text-lg uppercase italic tracking-tighter">Saldo Acumulado</span>
                     <span className={`font-black text-2xl ${real.fluxoCaixa >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>{safeCurrency(real.fluxoCaixa)}</span>
                 </div>
             </div>
