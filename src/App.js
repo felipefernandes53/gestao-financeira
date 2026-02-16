@@ -314,7 +314,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddRecurringTransa
 
     return (
         <div className="fixed bottom-24 right-4 w-80 md:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50 h-[480px] animate-fade-in-up">
-            <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center shadow-lg"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold tracking-tight">Estratégia IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
+            <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center shadow-lg"><div className="flex items-center gap-2"><LucideMessageSquare size={20} /><span className="font-bold tracking-tight">Assistente IA</span></div><button onClick={onClose}><LucideX size={20} /></button></div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950/50">
                 {messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -661,7 +661,7 @@ function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
         { title: "BEM-VINDO!", desc: "Seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "LANÇAMENTOS", desc: "Registe tudo rapidamente. Use a opção de recorrência para despesas fixas.", icon: <LucidePlus size={48} className="text-green-500"/> },
+        { title: "LANÇAMENTOS", desc: "Registre tudo rapidamente. Use a opção de recorrência para despesas fixas.", icon: <LucidePlus size={48} className="text-green-500"/> },
         { title: "ASSISTENTE IA", desc: "Dê ordens por texto ou voz. 'Internet 100 reais fixa por 12 meses' cria automaticamente os lançamentos futuros.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
         { title: "PATRIMÔNIO", desc: "Controle bens e investimentos com rendimento diário estimado por índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
         { title: "ESTRATÉGIA", desc: "Analise seu DRE e Fluxo de Caixa. Use 'Todo o Período' para um panorama histórico total.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
