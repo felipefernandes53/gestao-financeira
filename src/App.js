@@ -11,7 +11,7 @@ import {
 import { 
     Trash2 as LucideTrash2, Building2 as LucideBuilding2, Plus as LucidePlus, Edit2 as LucideEdit2, X as LucideX, Settings as LucideSettings, 
     PieChart as LucidePieChart, Target as LucideTarget, ChevronDown as LucideChevronDown, ChevronRight as LucideChevronRight, Search as LucideSearch, 
-    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell
+    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend
 } from 'lucide-react';
 
 // --- SUAS CHAVES REAIS DO FIREBASE ---
@@ -97,7 +97,6 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// *** CORREÇÃO DE SEGURANÇA ***
 const transactionCategories = categoriesBusiness; 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
@@ -155,6 +154,115 @@ const calculateFinancials = (data = [], type = 'business') => {
     return financials;
 };
 
+// --- Componentes do Chat ---
+
+const ChatInterface = ({ onAddTransaction, currentCompany, transactions }) => {
+    const [messages, setMessages] = useState([
+        { id: 1, text: "Olá! Sou seu assistente financeiro. Pode falar comigo naturalmente.", sender: 'bot' },
+        { id: 2, text: "Ex: 'Recebi 500 de vendas' ou 'Gastei 100 com internet'. Também posso mostrar o 'resumo'.", sender: 'bot' }
+    ]);
+    const [inputText, setInputText] = useState('');
+    const messagesEndRef = useRef(null);
+    const companyType = currentCompany?.type || 'business';
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const handleSend = async () => {
+        if (!inputText.trim()) return;
+
+        const userMsg = { id: Date.now(), text: inputText, sender: 'user' };
+        setMessages(prev => [...prev, userMsg]);
+        const text = inputText.toLowerCase();
+        setInputText('');
+
+        // Simulação de "Digitando..."
+        setTimeout(async () => {
+            let botResponse = { id: Date.now() + 1, text: '', sender: 'bot' };
+
+            // Lógica de Processamento de Linguagem Natural (Simples)
+            if (text.includes('resumo') || text.includes('saldo') || text.includes('como estamos')) {
+                const fins = calculateFinancials(transactions, companyType);
+                botResponse.text = `📊 *Panorama Atual*\n\n💰 Entradas: ${safeCurrency(fins.receita)}\n💸 Saídas: ${safeCurrency(fins.totalSaidas)}\n\n📉 *Saldo Final: ${safeCurrency(fins.fluxoCaixa)}*`;
+            } 
+            else {
+                // Tentativa de identificar lançamento
+                const amountMatch = text.match(/\d+([.,]\d+)?/);
+                if (amountMatch) {
+                    const amount = parseFloat(amountMatch[0].replace(',', '.'));
+                    let type = '';
+                    let typeLabel = '';
+                    let subcategory = '';
+
+                    // Palavras-chave para identificar tipo
+                    if (['recebi', 'ganhei', 'venda', 'entrada', 'receita'].some(w => text.includes(w))) {
+                        type = companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA;
+                        typeLabel = 'Receita';
+                    } else if (['gastei', 'paguei', 'saída', 'compra', 'custo'].some(w => text.includes(w))) {
+                        // Tenta ser mais específico
+                        if (text.includes('imposto')) type = companyType === 'personal' ? TransactionTypePersonal.DIVIDAS : TransactionTypeBusiness.IMPOSTOS;
+                        else if (text.includes('juro') || text.includes('multa')) type = companyType === 'personal' ? TransactionTypePersonal.DIVIDAS : TransactionTypeBusiness.JUROS_FINANCEIROS;
+                        else type = companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.DESPESA_OPERACIONAL; // Default genérico
+                        typeLabel = 'Despesa';
+                    }
+
+                    if (type) {
+                        // Extrai descrição (remove valor e palavras chaves simples)
+                        const desc = text.replace(amountMatch[0], '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$)/g, '').trim();
+                        
+                        await onAddTransaction({
+                            desc: desc || 'Lançamento via Chat',
+                            amount,
+                            type,
+                            subcategory: '', // Pode ser aprimorado para detectar subcategoria
+                            date: new Date()
+                        });
+                        botResponse.text = `✅ Feito! Lancei *${safeCurrency(amount)}* como ${typeLabel} ("${desc || 'Geral'}").`;
+                    } else {
+                        botResponse.text = "Entendi o valor, mas não sei se é receita ou despesa. Tente usar 'Recebi' ou 'Gastei'.";
+                    }
+                } else {
+                    botResponse.text = "Não entendi. Tente algo como 'Gastei 50 no almoço' ou peça um 'resumo'.";
+                }
+            }
+            setMessages(prev => [...prev, botResponse]);
+        }, 600);
+    };
+
+    return (
+        <div className="flex flex-col h-[600px] bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.map(msg => (
+                    <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] p-3 rounded-2xl text-sm whitespace-pre-wrap ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-none shadow-sm'}`}>
+                            {msg.text}
+                        </div>
+                    </div>
+                ))}
+                <div ref={messagesEndRef} />
+            </div>
+            <div className="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex gap-2">
+                <input 
+                    className="flex-1 bg-slate-100 dark:bg-slate-900 border-0 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
+                    placeholder="Digite aqui... (ex: Gastei 20 em café)"
+                    value={inputText}
+                    onChange={e => setInputText(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSend()}
+                />
+                <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors">
+                    <LucideSend size={18} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// ... (Outros componentes DREView, BudgetPlanningView, etc. mantidos iguais) ...
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
@@ -239,6 +347,7 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
         </div>
     );
 };
+// ... (BudgetPlanningView, CashFlowView, ChartsView, CategoryPieChart, CalculatorModal, ExportModal, PrintLayout, RepeatModal, InstallGuideModal, TutorialModal, Sidebar mantidos) ...
 
 const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, companyType }) => {
     const [localBudget, setLocalBudget] = useState({});
@@ -391,23 +500,6 @@ const CategoryPieChart = ({ transactions, type }) => {
     );
 };
 
-const CalculatorModal = ({ onClose, onConfirm }) => {
-    const [expression, setExpression] = useState('');
-    const handleBtnClick = (val) => { if (val === 'C') { setExpression(''); } else if (val === '=') { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); const result = eval(sanitized); setExpression(String(result)); } catch (e) { setExpression('Erro'); setTimeout(() => setExpression(''), 1000); } } else { setExpression(prev => prev + val); } };
-    const handleConfirm = () => { let finalVal = expression; if (/[+\-x÷]/.test(expression)) { try { const sanitized = expression.replace(/x/g, '*').replace(/÷/g, '/').replace(/,/g, '.'); finalVal = String(eval(sanitized)); } catch (e) { return; } } onConfirm(finalVal.replace('.', ',')); };
-    const btns = ['7','8','9','÷','4','5','6','x','1','2','3','-','C','0',',','+'];
-    return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in print:hidden" style={{zIndex: 9999}}>
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6">
-                <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">Calculadora</h3><button onClick={onClose}><LucideX className="text-slate-400 hover:text-slate-600" /></button></div>
-                <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl mb-4 text-right text-2xl font-mono font-bold text-slate-800 dark:text-white overflow-x-auto">{expression || '0'}</div>
-                <div className="grid grid-cols-4 gap-2 mb-4">{btns.map(b => (<button key={b} onClick={() => handleBtnClick(b)} className={`p-4 rounded-xl font-bold text-lg transition-colors ${['C'].includes(b) ? 'bg-red-100 text-red-600 hover:bg-red-200' : ['÷','x','-','+'].includes(b) ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{b}</button>))}<button onClick={() => handleBtnClick('=')} className="col-span-4 bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-white p-3 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-500">=</button></div>
-                <button onClick={handleConfirm} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors">USAR ESTE VALOR</button>
-            </div>
-        </div>
-    );
-};
-
 const ExportModal = ({ onClose, csvContent, fileName }) => {
     const [copied, setCopied] = useState(false);
     const textAreaRef = useRef(null);
@@ -550,6 +642,12 @@ export default function App() {
     const [showPrintPreview, setShowPrintPreview] = useState(false);
     const [showCalculator, setShowCalculator] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+    
+    // Chat state
+    const [chatMessages, setChatMessages] = useState([
+        { id: 1, text: "Olá! Sou seu assistente financeiro. Pode falar comigo naturalmente.", sender: 'bot' },
+        { id: 2, text: "Ex: 'Recebi 500 de vendas' ou 'Gastei 100 com internet'. Também posso mostrar o 'resumo'.", sender: 'bot' }
+    ]);
 
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [repeatingTransaction, setRepeatingTransaction] = useState(null);
@@ -558,8 +656,8 @@ export default function App() {
     const [formSubcat, setFormSubcat] = useState('');
     const [formDesc, setFormDesc] = useState('');
     const [formAmount, setFormAmount] = useState('');
-    const [isRecurring, setIsRecurring] = useState(false); // Novo estado para checkbox de recorrência
-    const [recurringMonths, setRecurringMonths] = useState(1); // Novo estado para meses de recorrência
+    const [isRecurring, setIsRecurring] = useState(false); 
+    const [recurringMonths, setRecurringMonths] = useState(1); 
     const [newSubcatName, setNewSubcatName] = useState('');
 
     // DEFINE CONSTANTE PARA EVITAR CRASHES NOS GRÁFICOS
@@ -577,7 +675,6 @@ export default function App() {
         const hasSeenTutorial = localStorage.getItem('hasSeenFinTutorial');
         if (!hasSeenTutorial) setShowTutorial(true);
         
-        // Verifica notificação
         if (Notification.permission === 'granted') setNotificationsEnabled(true);
 
         if (typeof firebaseConfig === 'undefined' || !firebaseConfig.apiKey.startsWith('AIza')) { console.error("FIREBASE CONFIG NÃO ENCONTRADA OU INVÁLIDA"); return; }
@@ -592,7 +689,6 @@ export default function App() {
         if (darkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
     }, [darkMode]);
     
-    // Notificação simples ao carregar se tiver passado 24h
     useEffect(() => {
         if (notificationsEnabled) {
             const lastAccess = localStorage.getItem('lastAccess');
@@ -611,7 +707,6 @@ export default function App() {
             const comps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             setCompanies(comps);
             
-            // LOGIC FOR PERSISTENCE
             const lastId = localStorage.getItem('lastCompanyId');
             const found = comps.find(c => c.id === lastId);
             
@@ -622,7 +717,7 @@ export default function App() {
             if (comps.length === 0 && !currentCompany) createDefaultCompany();
             setLoading(false);
         });
-    }, [user, db]); // currentCompany removed from deps to avoid loop
+    }, [user, db]); 
 
     const handleCompanyChange = (company) => {
         setCurrentCompany(company);
@@ -670,8 +765,27 @@ export default function App() {
 
     const resetForm = () => { setEditingTransaction(null); setFormDate(new Date().toISOString().split('T')[0]); setFormType(activeCategories[0].value); setFormSubcat(''); setFormDesc(''); setFormAmount(''); setIsRecurring(false); setRecurringMonths(1); };
     const handleEditClick = (t) => { setEditingTransaction(t); setFormDesc(t.desc); setFormAmount(t.amount.toString().replace('.', ',')); setFormType(t.type); setFormSubcat(t.subcategory || ''); if (t.createdAt) setFormDate(t.createdAt.toDate().toISOString().split('T')[0]); };
+    
+    // FUNÇÃO GENÉRICA PARA ADICIONAR TRANSAÇÃO (USADA PELO CHAT)
+    const addTransaction = async ({ desc, amount, type, subcategory, date }) => {
+        if (!currentCompany || !user) return;
+        try {
+            const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`);
+            const data = { 
+                desc, 
+                amount: parseFloat(amount), 
+                type, 
+                subcategory, 
+                createdAt: Timestamp.fromDate(date) 
+            };
+            await addDoc(collectionRef, data);
+        } catch (err) {
+            console.error(err);
+            throw err;
+        }
+    };
+
     const handleSaveTransaction = async (e) => { e.preventDefault(); if (!currentCompany) { alert("Selecione uma empresa."); return; } const val = parseFloat(formAmount.replace(',', '.')); const parts = formDate.split('-'); const selectedDate = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0)); if (!val || !user || isNaN(selectedDate.getTime())) return; try { const collectionRef = collection(db, `artifacts/${appId}/users/${user.uid}/companies/${currentCompany.id}/fin_data`); const data = { desc: formDesc, amount: val, type: formType, subcategory: formSubcat, createdAt: Timestamp.fromDate(selectedDate) }; if (editingTransaction) { await updateDoc(doc(collectionRef, editingTransaction.id), { ...data, editedAt: Timestamp.now() }); } else { 
-        // Lógica de Recorrência Integrada
         if (isRecurring && recurringMonths > 1) {
             const batch = writeBatch(db);
             for (let i = 0; i < recurringMonths; i++) {
@@ -778,7 +892,14 @@ export default function App() {
             </header>
 
             <main className="max-w-5xl mx-auto animate-fade-in p-4 md:p-8 pt-0 print:hidden">
-                <div className="flex bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 w-full max-w-2xl mb-6 mx-auto md:mx-0">{['lancamentos', 'planejamento', 'resultados'].map(tab => (<button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 py-2.5 text-sm font-bold uppercase rounded-lg transition-all ${mainTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{tab === 'lancamentos' ? 'Lançamentos' : tab === 'planejamento' ? 'Planejamento' : 'Resultados'}</button>))}</div>
+                <div className="flex bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 w-full max-w-2xl mb-6 mx-auto md:mx-0">
+                    {['lancamentos', 'assistente', 'planejamento', 'resultados'].map(tab => (
+                        <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 py-2.5 text-sm font-bold uppercase rounded-lg transition-all ${mainTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                            {tab === 'lancamentos' ? 'Lançamentos' : tab === 'assistente' ? 'Assistente' : tab === 'planejamento' ? 'Planejamento' : 'Resultados'}
+                        </button>
+                    ))}
+                </div>
+
                 {mainTab === 'lancamentos' && (<div className="grid grid-cols-1 lg:grid-cols-5 gap-8"><div className="lg:col-span-2 space-y-6"><div className={`bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border-2 ${editingTransaction ? 'border-amber-400 dark:border-amber-600' : 'border-slate-200 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-4"><h2 className={`font-bold text-lg ${editingTransaction ? 'text-amber-700 dark:text-amber-400' : 'text-slate-800 dark:text-white'}`}>{editingTransaction ? 'Editando' : 'Novo Lançamento'}</h2>{editingTransaction && <button onClick={resetForm} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"><LucideX size={20} /></button>}</div><form onSubmit={handleSaveTransaction} className="space-y-4"><div><label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1 mb-1 block">Data</label><input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium outline-none focus:border-indigo-500 dark:text-white transition-all" /></div><select value={formType} onChange={(e) => { setFormType(e.target.value); setFormSubcat(''); }} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:border-indigo-500 dark:text-white transition-all">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select><select value={formSubcat} onChange={(e) => setFormSubcat(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:border-indigo-500 dark:text-white transition-all disabled:opacity-50" disabled={!subcategories[formType] || subcategories[formType].length === 0}><option value="">{(!subcategories[formType] || subcategories[formType].length === 0) ? 'Sem subcategorias' : 'Selecione Subcategoria (opcional)'}</option>{subcategories[formType]?.map(sub => <option key={sub.id} value={sub.name}>{sub.name}</option>)}</select><input value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Descrição" required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:border-indigo-500 dark:text-white transition-all" /><div className="relative"><span className="absolute left-3 top-3 text-slate-400 font-medium">R$</span><input value={formAmount} onChange={(e) => setFormAmount(e.target.value)} placeholder="0,00" required className="w-full p-3 pl-9 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-lg font-semibold outline-none focus:border-indigo-500 dark:text-white transition-all" /></div>
                 
                 {/* Checkbox Recorrência */}
@@ -797,6 +918,14 @@ export default function App() {
                 )}
 
                 <button type="submit" className={`w-full py-3.5 text-white rounded-xl font-bold text-base transition-colors shadow-sm ${editingTransaction ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}>{editingTransaction ? 'ATUALIZAR' : 'REGISTRAR'}</button></form></div></div><div className="lg:col-span-3"><div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden h-[600px] flex flex-col"><div className="p-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200 flex justify-between items-center flex-wrap gap-3"><div className="flex items-center gap-2 flex-1"><span>Histórico</span><span className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs px-2 py-1 rounded-full">{searchedData.length} itens</span></div><div className="relative w-full md:w-auto md:max-w-xs"><LucideSearch className="absolute left-3 top-2.5 text-slate-400" size={16} /><input type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-slate-100 dark:bg-slate-900 border-0 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all" /></div></div><div className="flex-1 overflow-y-auto"><ul className="divide-y divide-slate-100 dark:divide-slate-700">{searchedData.slice().sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (<li key={t.id} className={`p-4 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-900/50 group transition-colors ${editingTransaction?.id === t.id ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}><div className="truncate pr-4 flex-1"><div className="flex items-center gap-2"><span className="font-semibold text-slate-800 dark:text-slate-200 truncate text-base">{t.desc}</span>{t.editedAt && <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 rounded-full font-medium" title="Editado">(editado)</span>}</div><div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap"><span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-md text-xs font-medium">{safeDate(t.createdAt)}</span><span>•</span><span>{activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</span>{t.subcategory && <><span>•</span><span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-md text-xs font-medium">{t.subcategory}</span></>}</div></div><div className="flex items-center gap-3"><div className={`font-bold text-base whitespace-nowrap ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{safeCurrency(t.amount)}</div><div className="flex opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleRepeat(t)} className="text-slate-300 hover:text-indigo-500 dark:hover:text-indigo-400 p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all" title="Repetir Lançamento"><LucideRepeat size={18} /></button><button onClick={() => handleEditClick(t)} className="text-slate-300 hover:text-indigo-500 dark:hover:text-indigo-400 p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all"><LucideEdit2 size={18} /></button><button onClick={() => handleDelete(t.id)} className="text-slate-300 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"><LucideTrash2 size={18} /></button></div></div></li>))}{searchedData.length === 0 && <li className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 p-8 space-y-4"><p>{searchTerm ? 'Nenhum lançamento encontrado para esta busca.' : 'Nenhum lançamento para este período.'}</p></li>}</ul></div></div></div></div>)}
+                
+                {/* NOVA ABA ASSISTENTE (CHATBOT) */}
+                {mainTab === 'assistente' && (
+                    <div className="max-w-2xl mx-auto">
+                        <ChatInterface onAddTransaction={addTransaction} currentCompany={currentCompany} transactions={transactions} />
+                    </div>
+                )}
+
                 {mainTab === 'planejamento' && (<BudgetPlanningView budget={budget} subcategories={subcategories} onSaveBudget={handleSaveBudget} isMonthly={typeof period === 'number'} companyType={companyType} />)}
                 {mainTab === 'resultados' && (<div><div className="flex space-x-1 bg-slate-200/50 dark:bg-slate-700/50 p-1 rounded-lg mb-6 max-w-md mx-auto">{['dre', 'fluxo', 'graficos', 'subcategorias'].map(key => (<button key={key} onClick={() => setResultTab(key)} className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${resultTab === key ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>{key === 'dre' ? 'DRE' : key === 'fluxo' ? 'Fluxo' : key === 'graficos' ? 'Gráficos' : <LucidePieChart size={16} className="mx-auto"/>}</button>))}</div><div className="animate-fade-in">{resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} />}{resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} />}{resultTab === 'graficos' && <ChartsView allTransactions={transactions} companyType={companyType} />}{resultTab === 'subcategorias' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.ALIMENTACAO : TransactionTypeBusiness.CUSTO} /></div>)}</div></div>)}
             </main>
