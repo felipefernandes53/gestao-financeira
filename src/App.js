@@ -14,7 +14,7 @@ import {
     Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh
 } from 'lucide-react';
 
-// --- SUAS CHAVES REAIS DO FIREBASE ---
+// --- CONFIGURAÇÃO DO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyALRU9Wtzo5jVzb9gG1neR64UfQrfmSMfE",
   authDomain: "app-financeiro-2f.firebaseapp.com",
@@ -27,6 +27,7 @@ const firebaseConfig = {
 
 const appId = "financial-app-production";
 
+// --- CONSTANTES GLOBAIS ---
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const PERIOD_OPTIONS = [
     { value: 0, label: 'Jan' }, { value: 1, label: 'Fev' }, { value: 2, label: 'Mar' },
@@ -39,9 +40,7 @@ const PERIOD_OPTIONS = [
     { value: 'Y', label: 'Ano Completo' },
 ];
 
-// --- DEFINIÇÃO DE CATEGORIAS (GLOBAIS) ---
-
-// EMPRESARIAL
+// --- CATEGORIAS EMPRESARIAIS ---
 const TransactionTypeBusiness = { 
     RECEITA: 'Receita', 
     CUSTO: 'Custo', 
@@ -66,7 +65,7 @@ const categoriesBusiness = [
     { value: TransactionTypeBusiness.IMPOSTOS, label: 'Impostos (-)', color: 'text-purple-700 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30', isPositive: false },
 ];
 
-// PESSOAL
+// --- CATEGORIAS PESSOAIS ---
 const TransactionTypePersonal = { 
     RECEITA: 'Renda', 
     MORADIA: 'Moradia', 
@@ -103,10 +102,8 @@ const categoriesPersonal = [
     { value: TransactionTypePersonal.DIVIDAS, label: 'Dívidas (-)', color: 'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/30', isPositive: false },
 ];
 
-// *** VARIÁVEL DE SEGURANÇA ***
-// Isso garante que "transactionCategories" sempre exista para evitar crash
+// VARIÁVEL DE SEGURANÇA GLOBAL
 const transactionCategories = categoriesBusiness; 
-
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ff6b6b', '#4ecdc4'];
 
 // --- HELPERS ---
@@ -260,7 +257,7 @@ const AssetsView = ({ assets, onAddAsset, onDeleteAsset }) => {
                     <select value={type} onChange={e => setType(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="bens">Bem Material</option><option value="investimento">Investimento</option></select>
                     <input placeholder="Nome (ex: Apto)" value={name} onChange={e => setName(e.target.value)} className="md:col-span-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
                     <input placeholder="Valor (R$)" value={value} onChange={e => setValue(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
-                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dólar</option></select>
+                    <select value={indexer} onChange={e => setIndexer(e.target.value)} className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white"><option value="">Sem índice</option><option value="CDI">CDI</option><option value="IPCA">IPCA</option><option value="INCC">INCC</option><option value="Dolar">Dolar</option></select>
                 </div>
                 <button onClick={handleAdd} className="w-full mt-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold">Adicionar</button>
             </div>
@@ -282,7 +279,6 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
     const [lastActionId, setLastActionId] = useState(null);
     const messagesEndRef = useRef(null);
     const companyType = currentCompany?.type || 'business';
-    
     const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
     useEffect(() => { if (isOpen) scrollToBottom(); }, [messages, isOpen]);
 
@@ -337,7 +333,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
                         const desc = text.replace(/[0-9.,]+/, '').replace(/(recebi|gastei|paguei|de|com|na|no|R\$|reais)/gi, '').trim();
                         try { const newId = await onAddTransaction({ desc: desc || 'Via Chat', amount, type, subcategory: '', date: new Date() }); setLastActionId(newId); botResponse.text = `✅ ${typeLabel}: ${safeCurrency(amount)}${desc ? ` ("${desc}")` : ''}.`; } catch (e) { botResponse.text = "Erro ao salvar."; }
                     } else { botResponse.text = `Entendi ${safeCurrency(amount)}, mas é Receita ou Despesa?`; }
-                } else { botResponse.text = "Não entendi o valor. Tente 'Gastei 50'."; }
+                } else { botResponse.text = "Não entendi. Tente 'Gastei 50'."; }
             }
             setMessages(prev => [...prev, botResponse]);
         }, 500);
@@ -358,7 +354,7 @@ const ChatInterface = ({ isOpen, onClose, onAddTransaction, onAddAsset, onUpdate
     );
 };
 
-// --- DRE VIEW ---
+// ... DRE VIEW ...
 const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) => {
     const [expandedRows, setExpandedRows] = useState({});
     const [showPercentage, setShowPercentage] = useState(false);
@@ -440,8 +436,6 @@ const DREView = ({ transactions, budget, isMonthly, isPrintMode, companyType }) 
         </div>
     );
 };
-
-// ... COMPONENTES AUXILIARES (Budget, CashFlow, etc) ...
 
 const BudgetPlanningView = ({ budget, subcategories, onSaveBudget, isMonthly, companyType }) => {
     const [localBudget, setLocalBudget] = useState({});
@@ -731,6 +725,7 @@ export default function App() {
     const [transactions, setTransactions] = useState([]);
     const [subcategories, setSubcategories] = useState({});
     const [budget, setBudget] = useState({});
+    const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [mainTab, setMainTab] = useState('lancamentos');
     const [resultTab, setResultTab] = useState('dre');
@@ -751,9 +746,7 @@ export default function App() {
     const [showChat, setShowChat] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     
-    // NOVO: Assets para Patrimônio
-    const [assets, setAssets] = useState([]);
-
+    // States for forms
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [repeatingTransaction, setRepeatingTransaction] = useState(null);
     const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
@@ -1028,89 +1021,4 @@ export default function App() {
                 <div className="flex flex-wrap gap-2 items-center">
                     <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm">{darkMode ? <LucideSun/> : <LucideMoon/>}</button>
                     <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={period} onChange={e => setPeriod(parseInt(e.target.value))}>{PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={year} onChange={e => setYear(parseInt(e.target.value))}>{[2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                    <button onClick={handleExportCSV} className="p-2 text-indigo-600"><LucideDownload/></button>
-                    <button onClick={handlePrint} className="p-2 text-slate-600"><LucidePrinter/></button>
-                </div>
-            </header>
-
-            <main className="max-w-5xl mx-auto p-4">
-                <div className="flex overflow-x-auto gap-2 mb-6 pb-2">
-                    {['lancamentos', 'planejamento', 'patrimonio', 'resultados'].map(t => (
-                        <button key={t} onClick={() => setMainTab(t)} className={`px-4 py-2 rounded-lg font-bold whitespace-nowrap ${mainTab === t ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                            {t.charAt(0).toUpperCase() + t.slice(1)}
-                        </button>
-                    ))}
-                </div>
-
-                {mainTab === 'lancamentos' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                        <div className="lg:col-span-2 space-y-6">
-                            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm">
-                                <h2 className="font-bold text-lg mb-4">{editingTransaction ? 'Editar' : 'Novo Lançamento'}</h2>
-                                <form onSubmit={handleSaveTransaction} className="space-y-4">
-                                    <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg" />
-                                    <select value={formType} onChange={e => setFormType(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg">{activeCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
-                                    <select value={formSubcat} onChange={e => setFormSubcat(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg"><option value="">Sem subcategoria</option>{subcategories[formType]?.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select>
-                                    <input value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Descrição" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg" />
-                                    <input value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0,00" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg font-bold" />
-                                    {!editingTransaction && (
-                                        <div className="flex items-center gap-2 mt-2"><input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} /> <label>Repetir?</label> {isRecurring && <input type="number" min="2" value={recurringMonths} onChange={e => setRecurringMonths(e.target.value)} className="w-16 p-1 border rounded" />}</div>
-                                    )}
-                                    <div className="flex gap-2">
-                                        <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-bold">Salvar</button>
-                                        {editingTransaction && <button type="button" onClick={resetForm} className="px-4 bg-slate-200 dark:bg-slate-700 rounded-lg">Cancelar</button>}
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                        <div className="lg:col-span-3">
-                            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm h-[600px] flex flex-col">
-                                <div className="p-4 border-b dark:border-slate-700 font-bold flex justify-between items-center">
-                                    <span>Histórico ({searchedData.length})</span>
-                                    <div className="relative"><LucideSearch size={14} className="absolute left-2 top-2.5 text-slate-400"/><input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-lg text-sm w-32" /></div>
-                                </div>
-                                <div className="flex-1 overflow-y-auto">
-                                    {searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (
-                                        <div key={t.id} className="p-4 border-b dark:border-slate-700 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                            <div>
-                                                <p className="font-bold">{t.desc}</p>
-                                                <p className="text-xs text-slate-500">{safeDate(t.createdAt)} • {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]} {t.subcategory && `• ${t.subcategory}`}</p>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className={`font-bold ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-600' : 'text-red-600'}`}>{safeCurrency(t.amount)}</span>
-                                                <button onClick={() => { setEditingTransaction(t); setFormDesc(t.desc); setFormAmount(t.amount); setFormType(t.type); setFormSubcat(t.subcategory); }}><LucideEdit2 size={16} className="text-slate-400 hover:text-indigo-500" /></button>
-                                                <button onClick={() => setRepeatingTransaction(t)}><LucideRepeat size={16} className="text-slate-400 hover:text-indigo-500" /></button>
-                                                <button onClick={() => handleDelete(t.id)}><LucideTrash2 size={16} className="text-slate-400 hover:text-red-500" /></button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {mainTab === 'planejamento' && <BudgetPlanningView budget={budget} subcategories={subcategories} onSaveBudget={handleSaveBudget} isMonthly={typeof period === 'number'} companyType={companyType} />}
-                
-                {mainTab === 'patrimonio' && <AssetsView assets={assets} onAddAsset={handleAddAsset} onDeleteAsset={handleDeleteAsset} />}
-                
-                {mainTab === 'resultados' && (
-                    <div className="space-y-8">
-                         <div className="flex gap-2 overflow-x-auto pb-2">
-                            {['dre', 'fluxo', 'graficos', 'subcategorias'].map(k => (<button key={k} onClick={() => setResultTab(k)} className={`px-3 py-1 rounded-full text-sm font-bold ${resultTab === k ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{k.toUpperCase()}</button>))}
-                         </div>
-                         {resultTab === 'dre' && <DREView transactions={filteredData} budget={budget} isMonthly={typeof period === 'number'} companyType={companyType} />}
-                         {resultTab === 'fluxo' && <CashFlowView transactions={filteredData} companyType={companyType} />}
-                         {resultTab === 'graficos' && <ChartsView allTransactions={transactions} companyType={companyType} />}
-                         {resultTab === 'subcategorias' && <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.RECEITA : TransactionTypeBusiness.RECEITA} /><CategoryPieChart transactions={filteredData} type={companyType === 'personal' ? TransactionTypePersonal.MORADIA : TransactionTypeBusiness.DESPESA_OPERACIONAL} /></div>}
-                    </div>
-                )}
-            </main>
-            
-            {/* BOTÃO CHAT FLUTUANTE */}
-            <button onClick={() => setShowChat(!showChat)} className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-xl hover:scale-105 transition-transform"><LucideMessageSquare size={24} /></button>
-        </div>
-    );
-}
+                    <select className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm" value={year} onChange={e => setYear(parseInt(e.target.
