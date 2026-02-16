@@ -11,11 +11,11 @@ import {
 import { 
     Trash2 as LucideTrash2, Building2 as LucideBuilding2, Plus as LucidePlus, Edit2 as LucideEdit2, X as LucideX, Settings as LucideSettings, 
     PieChart as LucidePieChart, Target as LucideTarget, ChevronDown as LucideChevronDown, ChevronRight as LucideChevronRight, Search as LucideSearch, 
-    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh, AlertCircle as LucideAlertCircle
+    Percent as LucidePercent, Info as LucideInfo, Download as LucideDownload, Copy as LucideCopy, CheckCircle as LucideCheckCircle, Smartphone as LucideSmartphone, Menu as LucideMenu, Check as LucideCheck, Rocket as LucideRocket, Moon as LucideMoon, Sun as LucideSun, Repeat as LucideRepeat, Printer as LucidePrinter, Calculator as LucideCalculator, User as LucideUser, Briefcase as LucideBriefcase, Bell as LucideBell, MessageSquare as LucideMessageSquare, Send as LucideSend, TrendingUp as LucideTrendingUp, Home as LucideHome, RefreshCw as LucideRefresh, AlertCircle as LucideAlertCircle, UserCircle as LucideUserCircle
 } from 'lucide-react';
 
 // ============================================================================
-// 1. CONFIGURAÇÕES E CONSTANTES GLOBAIS (ANTI-CRASH)
+// 1. CONFIGURAÇÕES E CONSTANTES GLOBAIS
 // ============================================================================
 
 const firebaseConfig = {
@@ -395,6 +395,10 @@ const DREView = ({ transactions, companyType }) => {
     );
 };
 
+// ============================================================================
+// 4. COMPONENTE PRINCIPAL (APP)
+// ============================================================================
+
 export default function App() {
     const [user, setUser] = useState(null);
     const [db, setDb] = useState(null);
@@ -415,6 +419,7 @@ export default function App() {
     const [showCalculator, setShowCalculator] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
     const [showUpdateMessage, setShowUpdateMessage] = useState(false);
+    const [showInitialChoice, setShowInitialChoice] = useState(false);
     const [deletingRecurring, setDeletingRecurring] = useState(null);
 
     // Form States
@@ -436,8 +441,8 @@ export default function App() {
         const app = initializeApp(firebaseConfig);
         const _auth = getAuth(app); const _db = getFirestore(app); setDb(_db);
         
-        const updateViews = parseInt(localStorage.getItem('upd_v46') || '0');
-        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v46', (updateViews + 1).toString()); }
+        const updateViews = parseInt(localStorage.getItem('upd_v46_final') || '0');
+        if (updateViews < 2) { setShowUpdateMessage(true); localStorage.setItem('upd_v46_final', (updateViews + 1).toString()); }
         if (!localStorage.getItem('hasSeenFinTutorial_v46')) setShowTutorial(true);
 
         return onAuthStateChanged(_auth, (u) => { if (u) setUser(u); else signInAnonymously(_auth); });
@@ -452,6 +457,7 @@ export default function App() {
             const comps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             setCompanies(comps);
             if (comps.length > 0 && !currentCompany) setCurrentCompany(comps[0]);
+            if (comps.length === 0) setShowInitialChoice(true);
             setLoading(false);
         });
     }, [user, db]);
@@ -542,7 +548,14 @@ export default function App() {
         if (t.createdAt) setFormDate(t.createdAt.toDate().toISOString().split('T')[0]);
     };
 
-    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">A preparar o seu sistema financeiro...</p></div>;
+    const handleCreateCompany = async (name, type) => {
+        if (!name || !user) return;
+        const newCompRef = doc(collection(db, `artifacts/${appId}/users/${user.uid}/companies`));
+        await setDoc(newCompRef, { name, type, createdAt: Timestamp.now() });
+        setShowInitialChoice(false);
+    };
+
+    if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-indigo-400"><LucideRefresh className="animate-spin mb-4" size={48} /><p className="font-black animate-pulse uppercase tracking-widest text-xs">Preparando o seu sistema financeiro...</p></div>;
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-500 ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
@@ -586,10 +599,10 @@ export default function App() {
                         <div className="lg:col-span-3">
                             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border dark:border-slate-800 h-[700px] flex flex-col overflow-hidden">
                                 <div className="p-6 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50"><span className="font-black uppercase text-xs tracking-widest text-slate-400">Fluxo de Movimentação</span><div className="relative"><LucideSearch size={14} className="absolute left-3 top-3 text-slate-400"/><input placeholder="Procurar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 p-2 bg-white dark:bg-slate-950 rounded-xl text-xs w-48 outline-none border dark:border-slate-700" /></div></div>
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
                                     {searchedData.sort((a,b) => b.createdAt?.seconds - a.createdAt?.seconds).map(t => (
                                         <div key={t.id} className="p-5 bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl flex justify-between items-center group transition-all">
-                                            <div className="truncate"><p className="font-black truncate text-sm uppercase leading-tight">{t.desc}</p><p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-tighter">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
+                                            <div className="truncate"><p className="font-black truncate text-sm uppercase leading-tight">{t.desc}</p><p className="text-[10px] text-slate-400 font-black mt-1 uppercase">{safeDate(t.createdAt)} · {activeCategories.find(c=>c.value===t.type)?.label.split(' ')[0]}</p></div>
                                             <div className="flex items-center gap-4">
                                                 <span className={`font-black whitespace-nowrap text-lg ${activeCategories.find(c=>c.value===t.type)?.isPositive ? 'text-green-500' : 'text-red-500'}`}>{safeCurrency(t.amount)}</span>
                                                 <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
@@ -619,12 +632,27 @@ export default function App() {
                 )}
             </main>
 
+            {/* ESCOLHA INICIAL DE CONTA */}
+            {showInitialChoice && (
+                <div className="fixed inset-0 bg-indigo-600 z-[150] flex items-center justify-center p-6 text-white text-center">
+                    <div className="max-w-md space-y-8 animate-fade-in">
+                        <div className="bg-white p-8 rounded-full inline-block mb-4 shadow-2xl"><LucideRocket size={48} className="text-indigo-600"/></div>
+                        <h2 className="text-4xl font-black tracking-tighter uppercase leading-none">Bem-vindo ao seu Sistema Financeiro</h2>
+                        <p className="text-lg opacity-90">Para começar, que tipo de conta deseja gerenciar agora?</p>
+                        <div className="grid grid-cols-1 gap-4">
+                            <button onClick={() => handleCreateCompany('Minhas Finanças', 'personal')} className="bg-white text-indigo-600 py-6 rounded-3xl font-black text-xl shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all"><LucideUserCircle size={32}/> Pessoa Física</button>
+                            <button onClick={() => handleCreateCompany('Minha Empresa', 'business')} className="bg-indigo-900/50 text-white py-6 rounded-3xl font-black text-xl shadow-xl border-4 border-indigo-400 flex items-center justify-center gap-3 active:scale-95 transition-all"><LucideBriefcase size={32}/> Empresa / Jurídico</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {deletingRecurring && (
                 <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
                     <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border dark:border-slate-700">
                         <LucideAlertCircle className="mx-auto text-amber-500 mb-4" size={48} />
                         <h3 className="text-xl font-black mb-2 uppercase tracking-tighter">Série Recorrente</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Este item faz parte de uma série. Deseja apagar apenas esta parcela ou toda a sequência futura?</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">Deseja apagar apenas esta parcela ou toda a sequência futura?</p>
                         <div className="space-y-3">
                             <button onClick={()=>handleDeleteSeries(deletingRecurring.id, false)} className="w-full py-4 bg-slate-100 dark:bg-slate-700 font-bold rounded-2xl transition-all">Apagar APENAS ESTE</button>
                             <button onClick={()=>handleDeleteSeries(deletingRecurring.id, true)} className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg transition-all">Apagar TODA A SÉRIE</button>
@@ -646,8 +674,8 @@ export default function App() {
 }
 
 function Sidebar({ isOpen, onClose, companies, currentCompany, onChangeCompany, onAddCompany, onOpenSettings }){
-    const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false);
-    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Contas Ativas<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><button onClick={()=>onAddCompany(newName, 'business')} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
+    const [newName, setNewName] = useState(''); const [isCreating, setIsCreating] = useState(false); const [newType, setNewType] = useState('business');
+    return (<> {isOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />} <div className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}> <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center font-black uppercase text-xs tracking-widest text-slate-400">Contas Ativas<button onClick={onClose}><LucideX/></button></div> <div className="p-4 flex flex-col h-[calc(100%-80px)]"> <div className="flex-1 space-y-3"> {companies.map(c => (<div key={c.id} onClick={() => {onChangeCompany(c); onClose();}} className={`p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${currentCompany?.id === c.id ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600'}`}> <div className={`w-10 h-10 rounded-full flex items-center justify-center ${c.type==='personal'?'bg-green-100 text-green-600':'bg-blue-100 text-blue-600'}`}>{c.type==='personal'? <LucideUser size={20}/>:<LucideBriefcase size={20}/>}</div> <div className="flex-1 font-black truncate text-sm uppercase">{c.name}</div> </div>))} <button onClick={()=>setIsCreating(true)} className="w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-indigo-400 transition-all"> <LucidePlus size={20}/> Nova Conta </button> {isCreating && <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border space-y-3"><input autoFocus placeholder="Nome da Conta" className="w-full p-2 rounded-lg border dark:bg-slate-900 outline-none" value={newName} onChange={e=>setNewName(e.target.value)} /><div className="flex gap-2"><button onClick={()=>setNewType('business')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='business'?'bg-indigo-100 border-indigo-600 text-indigo-700':'bg-white text-slate-400'}`}>Empresa</button><button onClick={()=>setNewType('personal')} className={`flex-1 py-1 text-[10px] font-bold rounded border ${newType==='personal'?'bg-green-100 border-green-600 text-green-700':'bg-white text-slate-400'}`}>Pessoal</button></div><button onClick={()=>{onAddCompany(newName, newType); setNewName(''); setIsCreating(false);}} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Criar</button></div>} </div> <div className="pt-4 border-t dark:border-slate-800"><button onClick={onOpenSettings} className="w-full p-4 flex items-center gap-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl"><LucideSettings/> Categorias</button></div> </div> </div> </>)
 }
 
 function CalculatorModal({onClose,onConfirm}){
@@ -664,8 +692,8 @@ function CalculatorModal({onClose,onConfirm}){
 function TutorialModal({onClose}){
     const [step, setStep] = useState(0);
     const slides = [
-        { title: "BEM-VINDO!", desc: "Seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
-        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registrar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
+        { title: "BEM-VINDO!", desc: "O seu sistema financeiro agora é inteligente. Vamos ver o que mudou?", icon: <LucideRocket size={48} className="text-indigo-600"/> },
+        { title: "LANÇAMENTOS", desc: "A aba LANÇAMENTOS permite registar saídas e entradas rapidamente.", icon: <LucidePlus size={48} className="text-green-500"/> },
         { title: "ASSISTENTE IA", desc: "Dê ordens por texto ou voz ao Assistente IA. Ele entende recorrências e patrimônios automaticamente.", icon: <LucideMessageSquare size={48} className="text-blue-500"/> },
         { title: "PATRIMÔNIO", desc: "Registe bens e investimentos. O sistema projeta o rendimento diário estimado para você baseado em índices reais.", icon: <LucideHome size={48} className="text-amber-500"/> },
         { title: "ESTRATÉGIA", desc: "Analise seu DRE e Fluxo de Caixa. Use 'Todo o Período' para um panorama histórico total.", icon: <LucidePieChart size={48} className="text-purple-500"/> }
@@ -715,7 +743,7 @@ function ChartsView({ allTransactions, companyType }){
     }, [allTransactions, companyType]);
 
     return (
-        <div className="h-80 bg-white dark:bg-slate-800 p-4 rounded-xl border dark:border-slate-700">
+        <div className="h-80 bg-white dark:bg-slate-800 p-4 rounded-xl border dark:border-slate-700 shadow-sm">
             <ResponsiveContainer width="100%" height="100%"><LineChart data={lineData}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="name" fontSize={10} /><YAxis fontSize={10} /><Tooltip formatter={(value) => safeCurrency(value)} /><Legend /><Line type="monotone" dataKey="Saldo" stroke="#4f46e5" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer>
         </div>
     );
